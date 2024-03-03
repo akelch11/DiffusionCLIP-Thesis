@@ -3,16 +3,41 @@ from .CelebA_HQ_dataset import get_celeba_dataset
 from .LSUN_dataset import get_lsun_dataset
 from torch.utils.data import DataLoader
 from .IMAGENET_dataset import get_imagenet_dataset
+from .geode_dataset import get_geode_dataset
 
-def get_dataset(dataset_type, dataset_paths, config, target_class_num=None, gender=None):
-    if dataset_type == 'AFHQ':
-        train_dataset, test_dataset = get_afhq_dataset(dataset_paths['AFHQ'], config)
+## copy
+# def get_dataset(dataset_type, dataset_paths, config, target_class_num=None, gender=None):
+#     if dataset_type == 'AFHQ':
+#         train_dataset, test_dataset = get_afhq_dataset(dataset_paths['AFHQ'], config)
+#     elif dataset_type == "LSUN":
+#         train_dataset, test_dataset = get_lsun_dataset(dataset_paths['LSUN'], config)
+#     elif dataset_type == "CelebA_HQ":
+#         train_dataset, test_dataset = get_celeba_dataset(dataset_paths['CelebA_HQ'], config)
+#     elif dataset_type == "IMAGENET":
+#         train_dataset, test_dataset = get_imagenet_dataset(dataset_paths['IMAGENET'], config, class_num=target_class_num)
+#     else:
+#         raise ValueError
+
+#     return train_dataset, test_dataset
+
+
+def get_dataset(
+    dataset_type, dataset_paths, config, target_class_num=None, gender=None
+):
+    if dataset_type == "AFHQ":
+        train_dataset, test_dataset = get_afhq_dataset(dataset_paths["AFHQ"], config)
     elif dataset_type == "LSUN":
-        train_dataset, test_dataset = get_lsun_dataset(dataset_paths['LSUN'], config)
+        train_dataset, test_dataset = get_lsun_dataset(dataset_paths["LSUN"], config)
     elif dataset_type == "CelebA_HQ":
-        train_dataset, test_dataset = get_celeba_dataset(dataset_paths['CelebA_HQ'], config)
+        train_dataset, test_dataset = get_celeba_dataset(
+            dataset_paths["CelebA_HQ"], config
+        )
     elif dataset_type == "IMAGENET":
-        train_dataset, test_dataset = get_imagenet_dataset(dataset_paths['IMAGENET'], config, class_num=target_class_num)
+        train_dataset, test_dataset = get_imagenet_dataset(
+            dataset_paths["IMAGENET"], config, class_num=target_class_num
+        )
+    elif dataset_type == "GEODE":
+        train_dataset, test_dataset = get_geode_dataset(dataset_paths["GEODE"], config)
     else:
         raise ValueError
 
@@ -39,6 +64,4 @@ def get_dataloader(train_dataset, test_dataset, bs_train=1, num_workers=0):
         pin_memory=True,
     )
 
-    return {'train': train_loader, 'test': test_loader}
-
-
+    return {"train": train_loader, "test": test_loader}

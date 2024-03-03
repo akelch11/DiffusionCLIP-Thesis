@@ -1,6 +1,6 @@
 data:
-  dataset: "AFHQ"
-  category: "imagenet"
+  dataset: "IMAGENET"
+  category: "GEODE"
   image_size: 512
   channels: 3
   logit_transform: false

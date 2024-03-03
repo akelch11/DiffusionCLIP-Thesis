@@ -3,15 +3,30 @@ from glob import glob
 import os
 from torch.utils.data import Dataset
 import math
-import numpy as np
+import numpy as np  # coppyyy
 import random
 from .imagenet_dic import IMAGENET_DIC
 
-def get_imagenet_dataset(data_root, config, class_num=None, random_crop=True, random_flip=False):
-    train_dataset = IMAGENET_dataset(data_root, mode='train', class_num=class_num, img_size=config.data.image_size,
-                                     random_crop=random_crop, random_flip=random_flip)
-    test_dataset = IMAGENET_dataset(data_root, mode='val', class_num=class_num, img_size=config.data.image_size,
-                                    random_crop=random_crop, random_flip=random_flip)
+
+def get_imagenet_dataset(
+    data_root, config, class_num=None, random_crop=True, random_flip=False
+):
+    train_dataset = IMAGENET_dataset(
+        data_root,
+        mode="train",
+        class_num=class_num,
+        img_size=config.data.image_size,
+        random_crop=random_crop,
+        random_flip=random_flip,
+    )
+    test_dataset = IMAGENET_dataset(
+        data_root,
+        mode="val",
+        class_num=class_num,
+        img_size=config.data.image_size,
+        random_crop=random_crop,
+        random_flip=random_flip,
+    )
 
     return train_dataset, test_dataset
 
@@ -20,14 +35,45 @@ def get_imagenet_dataset(data_root, config, class_num=None, random_crop=True, ra
 
 
 class IMAGENET_dataset(Dataset):
-    def __init__(self, image_root, mode='val', class_num=None, img_size=512, random_crop=True, random_flip=False):
+    def __init__(
+        self,
+        image_root,
+        mode="val",
+        class_num=None,
+        img_size=512,
+        random_crop=True,
+        random_flip=False,
+    ):
+        # super().__init__()
+        # if class_num is not None:
+        #     self.data_dir = os.path.join(image_root, mode, IMAGENET_DIC[str(class_num)][0], '*.JPEG')
+        #     self.image_paths = sorted(glob(self.data_dir))
+        # else:
+        #     self.data_dir = os.path.join(image_root, mode, '*', '*.JPEG')
+        #     self.image_paths = sorted(glob(self.data_dir))
+        # self.img_size = img_size
+        # self.random_crop = random_crop
+        # self.random_flip = random_flip
+        # self.class_num = class_num
+
         super().__init__()
-        if class_num is not None:
-            self.data_dir = os.path.join(image_root, mode, IMAGENET_DIC[str(class_num)][0], '*.JPEG')
-            self.image_paths = sorted(glob(self.data_dir))
-        else:
-            self.data_dir = os.path.join(image_root, mode, '*', '*.JPEG')
-            self.image_paths = sorted(glob(self.data_dir))
+        # if class_num is not None:
+        #   self.data_dir = os.path.join(image_root, mode, IMAGENET_DIC[str(class_num)][0], '*.JPEG')
+        #    self.image_paths = sorted(glob(self.data_dir))
+        # else:
+        #   self.data_dir = os.path.join(image_root, mode, '*', '*.JPEG')
+        #   self.image_paths = sorted(glob(self.data_dir))
+
+        self.data_dir = f"./data/imagenet/{mode}/home"
+
+        class_type = "home"
+        files = [
+            f"data/imagenet/{mode}/{class_type}/" + f
+            for f in os.listdir(f"data/imagenet/{mode}/{class_type}")
+            if os.path.isfile(os.path.join(f"data/imagenet/{mode}/{class_type}", f))
+        ]
+        self.image_paths = files
+
         self.img_size = img_size
         self.random_crop = random_crop
         self.random_flip = random_flip
@@ -52,7 +98,7 @@ class IMAGENET_dataset(Dataset):
         # y = [self.class_num, IMAGENET_DIC[str(self.class_num)][0], IMAGENET_DIC[str(self.class_num)][1]]
         # y = self.class_num
 
-        return np.transpose(arr, [2, 0, 1])#, y
+        return np.transpose(arr, [2, 0, 1])  # , y
 
     def __len__(self):
         return len(self.image_paths)
@@ -75,7 +121,7 @@ def center_crop_arr(pil_image, image_size):
     arr = np.array(pil_image)
     crop_y = (arr.shape[0] - image_size) // 2
     crop_x = (arr.shape[1] - image_size) // 2
-    return arr[crop_y: crop_y + image_size, crop_x: crop_x + image_size]
+    return arr[crop_y : crop_y + image_size, crop_x : crop_x + image_size]
 
 
 def random_crop_arr(pil_image, image_size, min_crop_frac=0.8, max_crop_frac=1.0):
@@ -99,4 +145,4 @@ def random_crop_arr(pil_image, image_size, min_crop_frac=0.8, max_crop_frac=1.0)
     arr = np.array(pil_image)
     crop_y = random.randrange(arr.shape[0] - image_size + 1)
     crop_x = random.randrange(arr.shape[1] - image_size + 1)
-    return arr[crop_y: crop_y + image_size, crop_x: crop_x + image_size]
+    return arr[crop_y : crop_y + image_size, crop_x : crop_x + image_size]

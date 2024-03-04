@@ -1,7 +1,7 @@
 import torch
 import torchvision.transforms as transforms
 import numpy as np
-
+## copy
 import clip
 from PIL import Image
 
@@ -32,10 +32,14 @@ class CLIPLoss(torch.nn.Module):
         super(CLIPLoss, self).__init__()
 
         self.device = device
-        self.model, clip_preprocess = clip.load(clip_model, device=self.device)
-
-        self.clip_preprocess = clip_preprocess
+        # self.model, clip_preprocess = clip.load(clip_model, device=self.device)
+        self.model = torch.load('./losses/clip_model.pt')
         
+        # self.clip_preprocess = clip_preprocess
+        clip_preprocess = torch.load('./losses/clip_preprocess.pt')
+        self.clip_preprocess = clip_preprocess
+
+
         self.preprocess = transforms.Compose([transforms.Normalize(mean=[-1.0, -1.0, -1.0], std=[2.0, 2.0, 2.0])] + # Un-normalize from [-1.0, 1.0] (GAN output) to [0, 1].
                                               clip_preprocess.transforms[:2] +                                      # to match CLIP input scale assumptions
                                               clip_preprocess.transforms[4:])                                       # + skip convert PIL to tensor
@@ -56,8 +60,12 @@ class CLIPLoss(torch.nn.Module):
         self.src_text_features = None
         self.target_text_features = None
         self.angle_loss = torch.nn.L1Loss()
+        
 
-        self.model_cnn, preprocess_cnn = clip.load("RN50", device=self.device)
+        model_cnn = torch.load('./losses/clip_model_cnn.pt')
+        self.model_cnn = model_cnn
+        preprocess_cnn = torch.load('./losses/clip_preprocess_cnn.pt')
+        # self.model_cnn, preprocess_cnn = clip.load("RN50", device=self.device)
         self.preprocess_cnn = transforms.Compose([transforms.Normalize(mean=[-1.0, -1.0, -1.0], std=[2.0, 2.0, 2.0])] + # Un-normalize from [-1.0, 1.0] (GAN output) to [0, 1].
                                         preprocess_cnn.transforms[:2] +                                                 # to match CLIP input scale assumptions
                                         preprocess_cnn.transforms[4:])                                                  # + skip convert PIL to tensor

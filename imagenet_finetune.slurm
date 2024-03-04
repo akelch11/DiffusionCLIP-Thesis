@@ -39,7 +39,7 @@ conda activate torch-thesis
                --n_precomp_img 30 \
                --model_path pretrained/512x512_diffusion.pt \
                --model_save_name imagenet_house_finetune \
-		       -—class_name house
+		       -—finetune_class_name house
 
 
 

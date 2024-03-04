@@ -25,7 +25,7 @@ class AFHQ_dataset(Dataset):
             print("WARNING: IMAGENET class name is blank")
             
         files = [
-            f"data/afhq/raw_images/train/images/_{class_name}" + f
+            f"data/afhq/raw_images/train/images/{class_name}/" + f
             for f in os.listdir(
                 f"data/afhq/raw_images/train/images/{class_name}"
             )
@@ -55,7 +55,7 @@ class AFHQ_dataset(Dataset):
 ################################################################################
 
 
-def get_afhq_dataset(data_root, config):
+def get_afhq_dataset(data_root, config, class_name=None):
     train_transform = tfs.Compose(
         [tfs.ToTensor(), tfs.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5), inplace=True)]
     )
@@ -70,6 +70,7 @@ def get_afhq_dataset(data_root, config):
         mode="train",
         animal_class="dog",
         img_size=config.data.image_size,
+        class_name=class_name
     )
     test_dataset = AFHQ_dataset(
         data_root,
@@ -77,6 +78,7 @@ def get_afhq_dataset(data_root, config):
         mode="val",
         animal_class="dog",
         img_size=config.data.image_size,
+        class_name=class_name
     )
 
     return train_dataset, test_dataset

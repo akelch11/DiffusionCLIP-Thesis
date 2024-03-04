@@ -9,27 +9,32 @@ import torchvision.transforms as tfs
 
 class AFHQ_dataset(Dataset):
     def __init__(
-        self, image_root, transform=None, mode="train", animal_class="dog", img_size=256
+        self, image_root, transform=None, mode="train", animal_class="dog", img_size=256, class_name=None
     ):
         super().__init__()
-        self.image_paths = glob(os.path.join(image_root, mode, animal_class, "*.jpg"))
+        # self.image_paths = glob(os.path.join(image_root, mode, animal_class, "*.jpg"))
         self.transform = transform
         self.img_size = img_size
         # print('files with ILS')
         # print('afhq dog files', os.listdir("data/afhq/raw_images/train/images"))
         # get only files from imagenet home subset
         print("getting imagenet house images")
+
+
+        if class_name == None:
+            print("WARNING: IMAGENET class name is blank")
+            
         files = [
-            "data/afhq/raw_images/train/images/imagenet_home_n03545150/" + f
+            f"data/afhq/raw_images/train/images/_{class_name}" + f
             for f in os.listdir(
-                "data/afhq/raw_images/train/images/imagenet_home_n03545150"
+                f"data/afhq/raw_images/train/images/{class_name}"
             )
             if os.path.isfile(
                 os.path.join(
-                    "data/afhq/raw_images/train/images/imagenet_home_n03545150", f
+                    f"data/afhq/raw_images/train/images/{class_name}", f
                 )
             )
-            and "n03545" in f
+            
         ]
         self.image_paths = files
 

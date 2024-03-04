@@ -14,7 +14,7 @@ import numpy as np
 
 
 class GEODE_dataset(Dataset):
-    def __init__(self, image_root, transform=None, mode="train", img_size=512):
+    def __init__(self, image_root, transform=None, mode="train", img_size=512, region=None, class_name=None):
         super().__init__()
         # self.image_paths = glob(
         #     os.path.join(
@@ -27,7 +27,10 @@ class GEODE_dataset(Dataset):
         #         "*.jpg",
         #     )
         # )
-        dir_path = "./data/geode/Nigeria_house/"
+        if region == None or class_name == None:
+            print("WARNING: GEODE region or class name is blank")
+
+        dir_path = f"./data/geode/{region}_{class_name}/"
         print("in GEODE dataset")
         # print(os.listdir(dir_path))
         files = [
@@ -42,7 +45,7 @@ class GEODE_dataset(Dataset):
         self.img_size = img_size
 
     def __getitem__(self, index):
-        print("getting GeoDE image")
+        print("getting GeoDE image", self.image_paths[index])
         image_path = self.image_paths[index]
         x = Image.open(image_path)
         x = x.resize((self.img_size, self.img_size))

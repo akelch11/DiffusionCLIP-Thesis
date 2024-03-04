@@ -22,10 +22,10 @@ from .geode_dataset import get_geode_dataset
 
 
 def get_dataset(
-    dataset_type, dataset_paths, config, target_class_num=None, gender=None
+    dataset_type, dataset_paths, config, target_class_num=None, gender=None, class_name=None, region=None
 ):
     if dataset_type == "AFHQ":
-        train_dataset, test_dataset = get_afhq_dataset(dataset_paths["AFHQ"], config)
+        train_dataset, test_dataset = get_afhq_dataset(dataset_paths["AFHQ"], config, class_name)
     elif dataset_type == "LSUN":
         train_dataset, test_dataset = get_lsun_dataset(dataset_paths["LSUN"], config)
     elif dataset_type == "CelebA_HQ":
@@ -37,7 +37,7 @@ def get_dataset(
             dataset_paths["IMAGENET"], config, class_num=target_class_num
         )
     elif dataset_type == "GEODE":
-        train_dataset, test_dataset = get_geode_dataset(dataset_paths["GEODE"], config)
+        train_dataset, test_dataset = get_geode_dataset(dataset_paths["GEODE"], config, class_name=class_name, region=region)
     else:
         raise ValueError
 

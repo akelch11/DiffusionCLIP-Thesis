@@ -57,6 +57,9 @@ class DiffusionCLIP(object):
             self.src_txts = SRC_TRG_TXT_DIC[self.args.edit_attr][0]
             self.trg_txts = SRC_TRG_TXT_DIC[self.args.edit_attr][1]
 
+        self.finetune_class_name = args.finetune_class_name
+        self.finetune_region = args.finetune_region
+
     def clip_finetune(self):
         print(self.args.exp)
         print(f'   {self.src_txts}')
@@ -421,12 +424,17 @@ class DiffusionCLIP(object):
                                                               gender='female')
                 elif self.args.data_override:
                     print(f'FORCING TO USE DATASET {self.args.data_override} for FINETUNE')
-                    train_dataset, test_dataset = get_dataset(self.args.data_override, DATASET_PATHS, self.config,
-                                                              target_class_num=self.args.target_class_num)
+                    if self.args.data_override == 'GEODE':
+                        train_dataset, test_dataset = get_dataset(self.args.data_override, DATASET_PATHS, self.config,
+                                                              target_class_num=self.args.target_class_num, \
+                                                              class_name=self.finetune_class_name, region=self.finetune_region)
+                    else:
+                        train_dataset, test_dataset = get_dataset(self.args.data_override, DATASET_PATHS, self.config,
+                                                              target_class_num=self.args.target_class_num, class_name=self.finetune_class_name)
                 else:
                     print('default to AFHQ')
                     train_dataset, test_dataset = get_dataset('AFHQ', DATASET_PATHS, self.config,
-                                                              target_class_num=self.args.target_class_num)
+                                                              target_class_num=self.args.target_class_num, class_name=self.finetune_class_name)
                     
 
                 loader_dic = get_dataloader(train_dataset, test_dataset, bs_train=self.args.bs_train,
@@ -553,10 +561,10 @@ class DiffusionCLIP(object):
                                     loss_clip = -torch.log((2 - clip_loss_func(x0, src_txt, x0_t, trg_txt)) / 2)
                                     loss_l1 = nn.L1Loss()(x0, x0_t)
                                     loss = self.args.clip_loss_w * loss_clip + self.args.l1_loss_w * loss_l1
-                                    if self.args.id_loss_w != 0:
-                                        print('using ID loss')
-                                        loss_id = torch.mean(id_loss_func(x0, x))
-                                        loss += self.args.id_loss_w * loss_id
+                                    # if self.args.id_loss_w != 0:
+                                    #     print('using ID loss')
+                                    #     loss_id = torch.mean(id_loss_func(x0, x))
+                                    #     loss += self.args.id_loss_w * loss_id
                                     loss.backward()
 
                                     optim_ft.step()

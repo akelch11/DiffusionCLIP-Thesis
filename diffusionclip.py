@@ -268,12 +268,12 @@ class DiffusionCLIP(object):
                             print(f"Training for 1 image takes {time_in_end - time_in_start:.4f}s")
                             if step == self.args.n_train_img - 1:
                                 break
-
-                        if isinstance(model, nn.DataParallel):
-                            torch.save(model.module.state_dict(), save_name)
-                        else:
-                            torch.save(model.state_dict(), save_name)
-                        print(f'Model {save_name} is saved.')
+                        if it_out == 0 or it_out == self.args.n_iter - 1:
+                            if isinstance(model, nn.DataParallel):
+                                torch.save(model.module.state_dict(), save_name)
+                            else:
+                                torch.save(model.state_dict(), save_name)
+                            print(f'Model {save_name} is saved.')
                         scheduler_ft.step()
 
                 # ----------- Eval -----------#
@@ -576,7 +576,7 @@ class DiffusionCLIP(object):
                             if self.args.save_train_image:
                                 extra = "ID" if self.args.id_loss_w > 0 else f"{trg_txt.replace(" ", "_")}{trg_txt.replace(" ", "_")}"
                                 save_train_name = f'{self.args.data_override}_{extra})train_{step}_{it_out}_ngen_{self.args.n_train_step}.png'
-                                tvu.save_image((x0_t + 1) * 0.5, os.path.join(self.args.image_folder, save_image_name))
+                                tvu.save_image((x0_t + 1) * 0.5, os.path.join(self.args.image_folder, save_train_name))
                             time_in_end = time.time()
                             print(f"Training for 1 image takes {time_in_end - time_in_start:.4f}s")
                             if step == self.args.n_train_img - 1:

@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1               # total number of tasks across all nodes
 #SBATCH --cpus-per-task=1        # cpu-cores per task (>1 if multi-threaded tasks)
 #SBATCH --gres=gpu:1             # number of gpus per node
-#SBATCH --time=00:30:00          # total run time limit (HH:MM:SS)
+#SBATCH --time=01:00:00          # total run time limit (HH:MM:SS)
 #SBATCH --mail-type=begin        # send mail when job begins
 #SBATCH --mail-type=end          # send mail when job ends
 #SBATCH --mail-type=fail         # send mail if job fails
@@ -13,6 +13,7 @@
 #SBATCH --gpus-per-node=1
 #SBATCH --constraint=gpu80
 #SBATCH --mem=80G
+
 
 
 module purge
@@ -37,6 +38,7 @@ conda activate torch-thesis
                --clip_loss_w 5 \
                --n_train_step 10 \
                --n_precomp_img 30 \
+               --save_train_image 0 \
                --model_path pretrained/512x512_diffusion.pt \
                --model_save_name imagenet_house_finetune \
                --finetune_class_name house

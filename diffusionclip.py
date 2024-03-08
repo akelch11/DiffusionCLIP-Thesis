@@ -9,6 +9,7 @@ from PIL import Image
 import torch
 from torch import nn
 import torchvision.utils as tvu
+from matplotlib import pyplot as plt
 
 from models.ddpm.diffusion import DDPM
 from models.improved_ddpm.script_util import i_DDPM
@@ -518,13 +519,16 @@ class DiffusionCLIP(object):
             optim_ft.load_state_dict(init_opt_ckpt)
             scheduler_ft.load_state_dict(init_sch_ckpt)
             clip_loss_func.target_direction = None
-
+            iter_losses = []
             # ----------- Train -----------#
             for it_out in range(self.args.n_iter):
+
+                iter_loss = 0
+                last_loss = 0
+
                 exp_id = os.path.split(self.args.exp)[-1]
                 print('save name parts', exp_id, trg_txt, it_out)
                 save_name = f'checkpoint/{exp_id}_{trg_txt.replace(" ", "_")}-{it_out}.pth'
-                full_model_save_name = f'checkpoint/best_model_ever_imagenet_finetune.pt'
                 if self.args.model_save_name:
                     save_name = f'checkpoint/{self.args.model_save_name}-{it_out}.pth'
                     full_model_save_name = f'checkpoint/{self.args.model_save_name}-{it_out}.pt'
@@ -567,6 +571,11 @@ class DiffusionCLIP(object):
                                     #     loss += self.args.id_loss_w * loss_id
                                     loss.backward()
 
+                                    if t_it == 0:
+                                        iter_loss += loss
+                                    if it_out == self.args.n_iter - 1 and t_it == len(seq_train) - 1:
+                                        last_loss += loss
+
                                     optim_ft.step()
                                     for p in model.module.parameters():
                                         p.grad = None
@@ -582,6 +591,11 @@ class DiffusionCLIP(object):
                             if step == self.args.n_train_img - 1:
                                 break
 
+                        # Tracking Loss for Plot
+                        iter_losses.append(iter_loss)
+                        if it_out == self.args.n_iter-1:
+                            iter_losses.append(last_loss)
+                        
                         if isinstance(model, nn.DataParallel):
                             torch.save(model.module.state_dict(), save_name)
                         else:
@@ -621,6 +635,15 @@ class DiffusionCLIP(object):
                                                                        f'{mode}_{step}_2_clip_{trg_txt.replace(" ", "_")}_{it_out}_ngen{self.args.n_test_step}.png'))
                             if step == self.args.n_test_img - 1:
                                 break
+
+            iter_values = np.arange(0, len(iter_losses) + 1)
+            plt.plot(iter_values, iter_losses)
+            plt.title('Loss vs Fine-Tuning Iterations')
+            plt.xlabel("Fine Tuning Iterations")
+            plt.ylabel("Loss")
+            plt.savefig(f'plot_{full_model_save_name}.png')
+
+
 
     def clip_latent_optim(self):
         # ----------- Data -----------#

@@ -641,7 +641,7 @@ class DiffusionCLIP(object):
             plt.title('Loss vs Fine-Tuning Iterations')
             plt.xlabel("Fine Tuning Iterations")
             plt.ylabel("Loss")
-            plt.savefig(f'plot_{full_model_save_name}.png')
+            plt.savefig(f'plots/plot_{full_model_save_name}.png')
 
 
 

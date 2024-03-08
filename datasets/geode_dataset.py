@@ -57,7 +57,7 @@ class GEODE_dataset(Dataset):
         return len(self.image_paths)
 
 
-def get_geode_dataset(data_root, config):
+def get_geode_dataset(data_root, config, class_name=None, region=None):
     train_transform = tfs.Compose(
         [tfs.ToTensor(), tfs.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5), inplace=True)]
     )
@@ -71,12 +71,16 @@ def get_geode_dataset(data_root, config):
         transform=train_transform,
         mode="train",
         img_size=config.data.image_size,
+        class_name=class_name,
+        region=region
     )
     test_dataset = GEODE_dataset(
         data_root,
         transform=test_transform,
         mode="val",
         img_size=config.data.image_size,
+        class_name=class_name,
+        region=region,
     )
 
     return train_dataset, test_dataset

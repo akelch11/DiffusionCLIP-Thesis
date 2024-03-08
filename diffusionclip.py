@@ -592,9 +592,9 @@ class DiffusionCLIP(object):
                                 break
 
                         # Tracking Loss for Plot
-                        iter_losses.append(iter_loss)
+                        iter_losses.append(iter_loss.item())
                         if it_out == self.args.n_iter-1:
-                            iter_losses.append(last_loss)
+                            iter_losses.append(last_loss.item())
                         
                         if isinstance(model, nn.DataParallel):
                             torch.save(model.module.state_dict(), save_name)

@@ -28,16 +28,16 @@ conda activate torch-thesis
                --edit_attr house_in_Nigeria      \
                --do_train 1             \
                --do_test 0 \
-               --n_train_img 5         \
+               --n_train_img 19         \
                --bs_train 1 \
-               --n_iter 2               \
-               --t_0 100                \
+               --n_iter 4               \
+               --t_0 200                \
                --n_inv_step 40          \
                --lr_clip_finetune 8e-6  \
                --id_loss_w 10            \
                --clip_loss_w 0 \
                --n_train_step 2 \
-               --n_precomp_img 5 \
+               --n_precomp_img 10 \
                --save_train_image 0 \
                --model_path pretrained/512x512_diffusion.pt \
                --model_save_name geode_house_finetune \

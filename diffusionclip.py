@@ -571,9 +571,9 @@ class DiffusionCLIP(object):
                                     #     loss += self.args.id_loss_w * loss_id
                                     loss.backward()
 
-                                    if t_it == 0:
-                                        iter_loss += loss
-                                    if it_out == self.args.n_iter - 1 and t_it == len(seq_train) - 1:
+                                    
+                                    iter_loss += loss
+                                    if it_out == self.args.n_iter - 1:
                                         last_loss += loss
 
                                     optim_ft.step()
@@ -593,6 +593,7 @@ class DiffusionCLIP(object):
 
                         # Tracking Loss for Plot
                         iter_losses.append(iter_loss.item())
+                        print('appending to loss,', iter_loss.item())
                         if it_out == self.args.n_iter-1:
                             iter_losses.append(last_loss.item())
                         

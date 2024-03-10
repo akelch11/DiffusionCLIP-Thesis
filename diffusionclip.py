@@ -597,12 +597,17 @@ class DiffusionCLIP(object):
                         if it_out == self.args.n_iter-1:
                             iter_losses.append(last_loss.item())
                         
-                        if isinstance(model, nn.DataParallel):
-                            torch.save(model.module.state_dict(), save_name)
-                        else:
-                            torch.save(model.state_dict(), save_name)
-                        torch.save(model, full_model_save_name) # same complete model obj for loading later
-                        print(f'Model {save_name} is saved.')
+
+                        if it_out == self.args.n_iter-1:
+                            if isinstance(model, nn.DataParallel):
+                                torch.save(model.module.state_dict(), save_name)
+                            else:
+                                torch.save(model.state_dict(), save_name)
+                            torch.save(model, full_model_save_name) # same complete model obj for loading later
+                            print(f'Model {save_name} is saved.')
+
+
+
                         scheduler_ft.step()
 
                 # ----------- Eval -----------#

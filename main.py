@@ -199,6 +199,7 @@ def parse_args_and_config():
     parser.add_argument("--model_save_name", type=str, default=None)
     parser.add_argument("--finetune_class_name", type=str, default=None)
     parser.add_argument("--finetune_region", type=str, default=None)
+    parser.add_argument("--param_set", type=str, default=None)
 
     args = parser.parse_args()
 

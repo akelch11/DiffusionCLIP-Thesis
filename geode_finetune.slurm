@@ -42,7 +42,8 @@ conda activate torch-thesis
                --model_path pretrained/512x512_diffusion.pt \
                --model_save_name geode_house_ALL_finetune \
                --finetune_class_name house \
-               --finetune_region ALL
+               --finetune_region ALL \
+               --param_set NORMAL
                
 
 

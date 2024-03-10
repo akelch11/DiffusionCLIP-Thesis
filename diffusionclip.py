@@ -404,8 +404,9 @@ class DiffusionCLIP(object):
                                               f'{self.args.data_override}_{self.config.data.category}_{mode}_t{self.args.t_0}_nim{self.args.n_precomp_img}_ninv{self.args.n_inv_step}_pairs.pth')
 
             else:
-                pairs_path = os.path.join('precomputed/',
-                                          f'{self.args.data_override}_{self.config.data.category}_{mode}_t{self.args.t_0}_nim{self.args.n_precomp_img}_ninv{self.args.n_inv_step}_pairs.pth')
+                # pairs_path = os.path.join('precomputed/',
+                #                           f'{self.args.data_override}_{self.config.data.category}_{mode}_t{self.args.t_0}_nim{self.args.n_precomp_img}_ninv{self.args.n_inv_step}_pairs.pth')
+                pairs_path = os.path.join('precomputed/',f'{self.args.model_save_name}_{self.args.param_set}.pth')
             print(pairs_path)
             if os.path.exists(pairs_path):
                 print(f'{mode} pairs exists')
@@ -531,9 +532,10 @@ class DiffusionCLIP(object):
                 print('save name parts', exp_id, trg_txt, it_out)
                 save_name = f'checkpoint/{exp_id}_{trg_txt.replace(" ", "_")}-{it_out}.pth'
                 if self.args.model_save_name:
-                    save_name = f'checkpoint/{self.args.model_save_name}-{it_out}.pth'
-                    full_model_save_name = f'checkpoint/{self.args.model_save_name}-{it_out}.pt'
-                # full_model_save_name = f'checkpoint/best_model_ever_imagenet_finetune.pt'
+                    # save_name = f'checkpoint/{self.args.model_save_name}-{it_out}.pth'
+                    # full_model_save_name = f'checkpoint/{self.args.model_save_name}-{it_out}.pt'
+                    save_name = f'checkpoint/{self.args.model_save_name}_{self.args.param_set}.pth'
+                    full_model_save_name = f'checkpoint/{self.args.model_save_name}_{self.args.param_set}.pt'
                 if self.args.do_train:
                     if os.path.exists(save_name):
                         print(f'{save_name} already exists.')

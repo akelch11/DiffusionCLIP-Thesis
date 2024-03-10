@@ -5,6 +5,7 @@ from tqdm import tqdm
 import os
 import numpy as np
 import cv2
+import pickle
 from PIL import Image
 import torch
 from torch import nn
@@ -642,12 +643,13 @@ class DiffusionCLIP(object):
                             if step == self.args.n_test_img - 1:
                                 break
 
-            iter_values = np.arange(0, len(iter_losses))
-            plt.plot(iter_values, iter_losses)
-            plt.title('Loss vs Fine-Tuning Iterations')
-            plt.xlabel("Fine Tuning Iterations")
-            plt.ylabel("Loss")
-            plt.savefig(f'plots/plot_{full_model_save_name}.png')
+            pickle.dump(iter_losses,f'plots/losses_{f'{self.args.data_override}_{self.config.data.category}_{mode}_t{self.args.t_0}_nim{self.args.n_precomp_img}_ninv{self.args.n_inv_step}_pairs.pth'}')
+            # iter_values = np.arange(0, len(iter_losses))
+            # plt.plot(iter_values, iter_losses)
+            # plt.title('Loss vs Fine-Tuning Iterations')
+            # plt.xlabel("Fine Tuning Iterations")
+            # plt.ylabel("Loss")
+            # plt.savefig(f'plots/plot_{self.args.save_name}.png')
 
 
 

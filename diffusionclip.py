@@ -642,7 +642,7 @@ class DiffusionCLIP(object):
                             if step == self.args.n_test_img - 1:
                                 break
 
-            iter_values = np.arange(0, len(iter_losses) + 1)
+            iter_values = np.arange(0, len(iter_losses))
             plt.plot(iter_values, iter_losses)
             plt.title('Loss vs Fine-Tuning Iterations')
             plt.xlabel("Fine Tuning Iterations")

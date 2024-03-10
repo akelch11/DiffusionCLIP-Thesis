@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=geode_finetune    # create a short name for your job
+#SBATCH --job-name=geode_finetune_ALL    # create a short name for your job
 #SBATCH --nodes=1                # node count
 #SBATCH --ntasks=1               # total number of tasks across all nodes
 #SBATCH --cpus-per-task=1        # cpu-cores per task (>1 if multi-threaded tasks)
@@ -40,9 +40,9 @@ conda activate torch-thesis
                --n_precomp_img 30 \
                --save_train_image 0 \
                --model_path pretrained/512x512_diffusion.pt \
-               --model_save_name imagenet_house_finetune \
+               --model_save_name geode_house_ALL_finetune \
                --finetune_class_name house \
-               --finetune_region Nigeria
+               --finetune_region ALL
                
 
 

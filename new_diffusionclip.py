@@ -66,34 +66,58 @@ class DiffusionCLIP(object):
  
     
 
-    def interpolate_latents_from_dataset(self, M=1):
-
-        print(self.args.exp)
+    def interpolate_latents_from_dataset(self, M=5):
+        # print(self.args.exp)
+        print('INSIDE INTERPOLATE')
         models = []
+        DIR_NAME = f'./latents/{self.args.model_save_name}/'
         latent_path = f'{DIR_NAME}_latent_pairs.pth'
         # change?
-        model_paths = [None, self.args.model_path]
-        for model_path in model_paths:
-            if self.config.data.dataset in ["FFHQ", "AFHQ", "IMAGENET"]:
-                print('FORCING IMAGNET DDPM CREATION')
-                # model = i_DDPM(self.config.data.dataset)
-                model = i_DDPM("IMAGENET")
-                if self.args.model_path:
-                    init_ckpt = torch.load(self.args.model_path)
-                else:
-                    init_ckpt = torch.load(MODEL_PATHS[self.config.data.dataset])
-                learn_sigma = True
-                print("Improved diffusion Model loaded.")
-            else:
-                print('Not implemented dataset')
-                raise ValueError
+        # model_paths = [None, self.args.model_path]
+        # for model_path in model_paths:
+        #     if self.config.data.dataset in ["FFHQ", "AFHQ", "IMAGENET"]:
+        #         print('FORCING IMAGNET DDPM CREATION')
+        #         # model = i_DDPM(self.config.data.dataset)
+        #         model = i_DDPM("IMAGENET")
+        #         if self.args.model_path:
+        #             init_ckpt = torch.load(self.args.model_path)
+        #         else:
+        #             init_ckpt = torch.load(MODEL_PATHS[self.config.data.dataset])
+        #         learn_sigma = True
+        #         print("Improved diffusion Model loaded.")
+        #     else:
+        #         print('Not implemented dataset')
+        #         raise ValueError
 
-            model_i.load_state_dict(ckpt)
-            model_i.to(self.device)
-            model_i = torch.nn.DataParallel(model_i)
-            model_i.eval()
-            print(f"{model_path} is loaded.")
-            models.append(model_i)
+        #     model.load_state_dict(init_ckpt)
+        #     model.to(self.device)
+        #     model = torch.nn.DataParallel(model_i)
+        #     model.eval()
+        #     print(f"{model_path} is loaded.")
+        #     models.append(model)
+
+
+
+
+        # if self.config.data.dataset in ["FFHQ", "AFHQ", "IMAGENET"]:
+        #     print('FORCING IMAGNET DDPM CREATION')
+        #     # model = i_DDPM(self.config.data.dataset)
+        #     model = i_DDPM("IMAGENET")
+        #     if self.args.model_path:
+        #         init_ckpt = torch.load(self.args.model_path)
+        #     else:
+        #         init_ckpt = torch.load(MODEL_PATHS[self.config.data.dataset])
+        #     learn_sigma = True
+        #     print("Improved diffusion Model loaded.")
+        # else:
+        #     print('Not implemented dataset')
+        #     raise ValueError
+        # model.load_state_dict(init_ckpt)
+        model = torch.load(self.args.model_path)
+        model.to(self.device)
+        models = model
+        learn_sigma=True
+        # model = torch.nn.DataParallel(model)
 
         # ----------- Precompute Latents thorugh Inversion Process -----------#
         print("Prepare identity latent")
@@ -104,24 +128,13 @@ class DiffusionCLIP(object):
         img_lat_pairs_dic = {}
         for mode in ['train']:
             img_lat_pairs = []
-            # pairs_path = os.path.join('precomputed/',
-            #                           f'{self.config.data.category}_{mode}_t{self.args.t_0}_nim{self.args.n_precomp_img}_ninv{self.args.n_inv_step}_pairs.pth')
-            # if os.path.exists(pairs_path):
-            #     print(f'{mode} pairs exists')
-            #     img_lat_pairs_dic[mode] = torch.load(pairs_path)
-            #     for step, (x0, x_id, e_id) in enumerate(img_lat_pairs_dic[mode]):
-            #         tvu.save_image((x0 + 1) * 0.5, os.path.join(self.args.image_folder, f'{mode}_{step}_0_orig.png'))
-            #         tvu.save_image((x_id + 1) * 0.5, os.path.join(self.args.image_folder, f'{mode}_{step}_1_rec.png'))
-            #         if step == self.args.n_precomp_img - 1:
-            #             break
-            #     continue
-            # else:
-            train_dataset, test_dataset = get_dataset(self.args.data_override, DATASET_PATHS, self.config)
-            loader_dic = get_dataloader(train_dataset, test_dataset, bs_train=self.args.bs_train,
+           
+            train_dataset, test_dataset = get_dataset(self.args.data_override, DATASET_PATHS, self.config, class_name=self.args.finetune_class_name, region=self.args.finetune_region)
+            loader_dic = get_dataloader(train_dataset, test_dataset, bs_train=1,
                                             num_workers=self.config.data.num_workers)
             loader = loader_dic[mode]
 
-            L_STEP = 0.3
+            L_STEP = 0.3  
 
             # list of tuple (interpolate, img1, img2)
             img_latent_pairs = []
@@ -130,18 +143,22 @@ class DiffusionCLIP(object):
                 os.mkdir(DIR_NAME)
             
             for step, img in enumerate(loader):
-                img_1_latent = self.invert_image(img)
-                for m in range(M): # multiplicty of latents
-                    rng_index = np.random.randint(0, len(loader))
-                    img_2 = loader[rng_index].clone()
-                    img_2_latent = self.invert_image(img_2)
+                # img_1_latent = self.invert_image(img, models)
+                # for m in range(M): # multiplicty of latents
+                rng_index = np.random.randint(0, len(train_dataset))
+                img_2 = train_dataset[rng_index].clone()
+                print('x2 shape', img_2.shape)
+                img_1_latent, img_2_latent = self.invert_images(img, img_2, models)
+                # img_2_latent = self.edit_invert_only(img=img_2)
+                # img_2_latent = self.invert_image(img_2, models)
 
-                    for lambda_step in [L_STEP, 1 - L_STEP]:
-                        with torch.no_grad():
-                            new_latent = img_1_latent + lambda_step * (img_2_latent - img_1_latent)
-                            img_latent_pairs.append([new_latent.detach(), img.detach(), img_2.detach(), step, rng_index, lambda_step])
+                for lambda_step in [L_STEP, 1 - L_STEP]:
+                    with torch.no_grad():
+                        new_latent = img_1_latent + lambda_step * (img_2_latent - img_1_latent)
+                        img_latent_pairs.append([new_latent.detach(), img.detach(), img_2.detach(), step, rng_index, lambda_step])
             
-            torch.save(image_latent_pairs, latent_path)
+            print('SAVING LATENTS at', latent_path)
+            torch.save(img_latent_pairs, latent_path)
 
     def generate_synth_output(self, models):
 
@@ -232,7 +249,7 @@ class DiffusionCLIP(object):
                 # else:
 
                 image_save_name = os.path.join(DIR_NAME,
-                                                           f'synth_{self.args.class_name}_{oi}_{ri}_{lam}.png')
+                                                           f'synth_{self.args.finetune_class_name}_{oi}_{ri}_{lam}.png')
                 image_save_name.replace(".", "")
                 tvu.save_image((x + 1) * 0.5, image_save_name)
 
@@ -583,13 +600,17 @@ class DiffusionCLIP(object):
             # plt.ylabel("Loss")
             # plt.savefig(f'plots/plot_{self.args.save_name}.png')
 
-    def invert_image(self, img, ret_x0=False):
+    def invert_image(self, img, models, ret_x0=False):
+
+                seq_inv = np.linspace(0, 1, self.args.n_inv_step) * self.args.t_0
+                seq_inv = [int(s) for s in list(seq_inv)]
+                seq_inv_next = [-1] + list(seq_inv[:-1])
                 x0 = img.to(self.config.device)
                 # tvu.save_image((x0 + 1) * 0.5, os.path.join(self.args.image_folder, f'{mode}_{step}_0_orig.png'))
-
+                n = 1
                 x = x0.clone()
                 with torch.no_grad():
-                    with tqdm(total=len(seq_inv), desc=f"Inversion process {mode} {step}") as progress_bar:
+                    with tqdm(total=len(seq_inv), desc=f"Inversion process") as progress_bar:
                         for it, (i, j) in enumerate(zip((seq_inv_next[1:]), (seq_inv[1:]))):
                             t = (torch.ones(n) * i).to(self.device)
                             t_prev = (torch.ones(n) * j).to(self.device)
@@ -599,7 +620,7 @@ class DiffusionCLIP(object):
                                                sampling_type='ddim',
                                                b=self.betas,
                                                eta=0,
-                                               learn_sigma=learn_sigma,
+                                               learn_sigma=True,
                                                ratio=0)
 
                             progress_bar.update(1)
@@ -618,7 +639,47 @@ class DiffusionCLIP(object):
                 # tvu.save_image((x + 1) * 0.5, os.path.join(self.args.image_folder, f'{mode}_{step}_1_rec.png'))
                 # if step == self.args.n_precomp_img - 1:
                 #     break
+    def invert_images(self, img1, img2,models, ret_x0=False):
+            ret = []
+            for i,img in enumerate([img1, img2]):
 
+                seq_inv = np.linspace(0, 1, self.args.n_inv_step) * self.args.t_0
+                seq_inv = [int(s) for s in list(seq_inv)]
+                seq_inv_next = [-1] + list(seq_inv[:-1])
+                x0 = img.to(self.config.device)
+                # tvu.save_image((x0 + 1) * 0.5, os.path.join(self.args.image_folder, f'{mode}_{step}_0_orig.png'))
+                n = 1
+                x = x0.clone()
+                if i == 1:
+                    x = torch.unsqueeze(x,0)
+                with torch.no_grad():
+                    with tqdm(total=len(seq_inv), desc=f"Inversion process") as progress_bar:
+                        for it, (i, j) in enumerate(zip((seq_inv_next[1:]), (seq_inv[1:]))):
+                            t = (torch.ones(n) * i).to(self.device)
+                            t_prev = (torch.ones(n) * j).to(self.device)
+
+                            x = denoising_step(x, t=t, t_next=t_prev, models=models,
+                                               logvars=self.logvar,
+                                               sampling_type='ddim',
+                                               b=self.betas,
+                                               eta=0,
+                                               learn_sigma=True,
+                                               ratio=0)
+
+                            progress_bar.update(1)
+
+                    x_lat = x.clone()
+                    # tvu.save_image((x_lat + 1) * 0.5, os.path.join(self.args.image_folder,
+                    #                                                f'{mode}_{step}_1_lat_ninv{self.args.n_inv_step}.png'))
+                    progress_bar.update(1)
+
+                    # img_lat_pairs.append([x0, x_lat.detach().clone()])
+                    if ret_x0:
+                        ret.append([x0,x_lat])
+                    else:
+                        ret.append(x_lat)
+            
+            return (ret[0], ret[1])
 
 
     def edit_images_from_dataset(self):
@@ -945,4 +1006,106 @@ class DiffusionCLIP(object):
                     tvu.save_image((x + 1) * 0.5, os.path.join(self.args.image_folder,
                                                            f'3_gen_t{self.args.t_0}_it{it}_ninv{self.args.n_inv_step}_ngen{self.args.n_test_step}_mrat{self.args.model_ratio}.png'))
 
-    
+    def edit_invert_only(self, img, eps=0.1, T_0=500):
+            n = 1
+            # IMG_SAVE_FOLDER = self.folder
+            # IMG_SAVE_FILE = self.file_name
+
+            # if img_path is not None:
+            # img = Image.open(img_path).convert("RGB")
+            # else:
+            # return
+            # print('post image load, invert')
+            # image_size = 512
+            # img = img.resize((image_size, image_size))
+            # img = np.array(img)/255
+            # img = torch.from_numpy(img).type(torch.FloatTensor).permute(2, 0, 1).unsqueeze(dim=0).repeat(n, 1, 1, 1)
+            # img = img.to(self.config.device)
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            img = img.to(device)
+            print('load image, before folders')
+            DATASET = 'IMAGENET'
+            # tvu.save_image(img, os.path.join(IMG_SAVE_FOLDER, f'ORIGINAL.png'))
+            x0 = (img - 0.5) * 2.
+
+            x_lat = x0
+
+            ### OUR DATASET IS IMAGENET,
+
+            print('before model load')
+            models = []
+
+            # if self.args.hybrid_noise:
+            #     model_paths = [None] + HYBRID_MODEL_PATHS
+            # else:
+            # model_paths = [None, self.args.model_path]
+            model_paths = [self.args.model_path]
+
+            for model_path in model_paths:
+                print('attempt to load', model_path)
+                if model_path:
+                    print('loading with torch')
+                    ckpt = torch.load(model_path)
+                # else:
+                #     ckpt = torch.load(MODEL_PATHS[self.config.data.dataset])
+                learn_sigma = True
+                print('construct model')
+                model_i = i_DDPM(DATASET)
+
+                model_i.load_state_dict(ckpt)
+                model_i.to(device)
+                print('model onto device')
+                model_i = torch.nn.DataParallel(model_i)
+                model_i.eval()
+                print(f"{model_path} is loaded.")
+                models.append(model_i)
+            models = models[0]
+            print('model loaded after')
+            with torch.no_grad():
+                #---------------- Invert Image to Latent in case of Deterministic Inversion process -------------------#
+
+                N_INV_STEP = 40
+                N_TEST_STEP = 40
+                ## NO DETERM INV
+                if True or self.args.deterministic_inv:
+                    x_lat_path = os.path.join(IMG_SAVE_FOLDER, f'INVERSION_{IMG_SAVE_FILE}_lat_t{T_0}_ninv{N_INV_STEP}.pth')
+                    print('path:', x_lat_path)
+                    if True or not os.path.exists(x_lat_path): ## FORCE TO DO INVERSION
+                        print('INVERTING IMAGE')
+                        seq_inv = np.linspace(0, 1, N_INV_STEP) * T_0
+                        seq_inv = [int(s) for s in list(seq_inv)]
+                        seq_inv_next = [-1] + list(seq_inv[:-1])
+
+                        x = x0.clone()
+                        with tqdm(total=len(seq_inv), desc=f"Inversion process ") as progress_bar:
+                            for it, (i, j) in enumerate(zip((seq_inv_next[1:]), (seq_inv[1:]))):
+                                t = (torch.ones(n) * i).to(device)
+                                t_prev = (torch.ones(n) * j).to(device)
+
+                                x = denoising_step(x, t=t, t_next=t_prev, models=models,
+                                                   logvars=self.logvar,
+                                                   sampling_type='ddim',
+                                                   b=self.betas,
+                                                   eta=0,
+                                                   learn_sigma=learn_sigma,
+                                                   ratio=0,
+                                                   )
+
+                                progress_bar.update(1)
+                            x_lat = x.clone()
+                            print("SAVING LATENT at path")
+                            torch.save(x_lat, x_lat_path)
+                            print('done path')
+                    else:
+                        print('Latent exists.')
+                        x_lat = torch.load(x_lat_path)
+
+                    print('------- DONE WITH PRE-SAMPLE INVERSION, SAVING PRESAMPLE INV')
+                    # torch.save(x_lat, os.path.join(IMG_SAVE_FOLDER, f'PRE_SAMPLE_INV_{IMG_SAVE_FILE}_x_lat_t{T_0}.pth'))
+                    # tvu.save_image(x_lat, os.path.join(IMG_SAVE_FOLDER, f'PRE_SAMPLE_INV_{IMG_SAVE_FILE}_x_lat_t{T_0}_eps_{eps}.png'))
+
+                    print(x_lat.shape)
+                    print(x_lat)
+                    print('RETURN LATENT OF', img_path)
+                    return x_lat
+                return x_lat # returning x0, image preturbation but still direct sampling

@@ -9,7 +9,7 @@ import numpy as np
 
 ## copy
 
-from diffusionclip import DiffusionCLIP
+from new_diffusionclip import DiffusionCLIP
 from configs.paths_config import HYBRID_MODEL_PATHS
 
 
@@ -24,6 +24,7 @@ def parse_args_and_config():
     parser.add_argument("--unseen2unseen", action="store_true")
     parser.add_argument("--clip_finetune_eff", action="store_true")
     parser.add_argument("--edit_one_image_eff", action="store_true")
+    parser.add_argument("--interpolate_latents", action="store_true")
 
     # Default
     parser.add_argument(
@@ -208,107 +209,107 @@ def parse_args_and_config():
         config = yaml.safe_load(f)
     new_config = dict2namespace(config)
 
-    if args.clip_finetune or args.clip_finetune_eff:
-        if args.edit_attr is not None:
-            args.exp = (
-                args.exp
-                + f"_FT_{args.data_override}_{new_config.data.category}_{args.edit_attr}_t{args.t_0}_ninv{args.n_inv_step}_ngen{args.n_train_step}_id{args.id_loss_w}_l1{args.l1_loss_w}_lr{args.lr_clip_finetune}"
-            )
-        else:
-            args.exp = (
-                args.exp
-                + f"_FT__{args.data_override}_{new_config.data.category}_{args.trg_txts}_t{args.t_0}_ninv{args.n_inv_step}_ngen{args.n_train_step}_id{args.id_loss_w}_l1{args.l1_loss_w}_lr{args.lr_clip_finetune}"
-            )
-    elif args.clip_latent_optim:
-        if args.edit_attr is not None:
-            args.exp = (
-                args.exp
-                + f'_LO_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_{args.edit_attr}_t{args.t_0}_ninv{args.n_inv_step}_ngen{args.n_train_step}_id{args.id_loss_w}_l1{args.l1_loss_w}_lr{args.lr_clip_lat_opt}'
-            )
-        else:
-            args.exp = (
-                args.exp
-                + f'_LO_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_{args.trg_txts}_t{args.t_0}_ninv{args.n_inv_step}_ngen{args.n_train_step}_id{args.id_loss_w}_l1{args.l1_loss_w}_lr{args.lr_clip_lat_opt}'
-            )
-    elif args.edit_images_from_dataset:
-        if args.model_path:
-            args.exp = (
-                args.exp
-                + f'_ED_{new_config.data.category}_t{args.t_0}_ninv{args.n_inv_step}_ngen{args.n_train_step}_{os.path.split(args.model_path)[-1].replace(".pth","")}'
-            )
-        elif args.hybrid_noise:
-            hb_str = "_"
-            for i, model_name in enumerate(HYBRID_MODEL_PATHS):
-                hb_str = hb_str + model_name.split("_")[1]
-                if i != len(HYBRID_MODEL_PATHS) - 1:
-                    hb_str = hb_str + "_"
-            args.exp = (
-                args.exp
-                + f"_ED_{new_config.data.category}_t{args.t_0}_ninv{args.n_train_step}_ngen{args.n_train_step}"
-                + hb_str
-            )
-        else:
-            args.exp = (
-                args.exp
-                + f"_ED_{new_config.data.category}_t{args.t_0}_ninv{args.n_train_step}_ngen{args.n_train_step}_orig"
-            )
+    # if args.clip_finetune or args.clip_finetune_eff:
+    #     if args.edit_attr is not None:
+    #         args.exp = (
+    #             args.exp
+    #             + f"_FT_{args.data_override}_{new_config.data.category}_{args.edit_attr}_t{args.t_0}_ninv{args.n_inv_step}_ngen{args.n_train_step}_id{args.id_loss_w}_l1{args.l1_loss_w}_lr{args.lr_clip_finetune}"
+    #         )
+    #     else:
+    #         args.exp = (
+    #             args.exp
+    #             + f"_FT__{args.data_override}_{new_config.data.category}_{args.trg_txts}_t{args.t_0}_ninv{args.n_inv_step}_ngen{args.n_train_step}_id{args.id_loss_w}_l1{args.l1_loss_w}_lr{args.lr_clip_finetune}"
+    #         )
+    # elif args.clip_latent_optim:
+    #     if args.edit_attr is not None:
+    #         args.exp = (
+    #             args.exp
+    #             + f'_LO_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_{args.edit_attr}_t{args.t_0}_ninv{args.n_inv_step}_ngen{args.n_train_step}_id{args.id_loss_w}_l1{args.l1_loss_w}_lr{args.lr_clip_lat_opt}'
+    #         )
+    #     else:
+    #         args.exp = (
+    #             args.exp
+    #             + f'_LO_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_{args.trg_txts}_t{args.t_0}_ninv{args.n_inv_step}_ngen{args.n_train_step}_id{args.id_loss_w}_l1{args.l1_loss_w}_lr{args.lr_clip_lat_opt}'
+    #         )
+    # elif args.edit_images_from_dataset:
+    #     if args.model_path:
+    #         args.exp = (
+    #             args.exp
+    #             + f'_ED_{new_config.data.category}_t{args.t_0}_ninv{args.n_inv_step}_ngen{args.n_train_step}_{os.path.split(args.model_path)[-1].replace(".pth","")}'
+    #         )
+    #     elif args.hybrid_noise:
+    #         hb_str = "_"
+    #         for i, model_name in enumerate(HYBRID_MODEL_PATHS):
+    #             hb_str = hb_str + model_name.split("_")[1]
+    #             if i != len(HYBRID_MODEL_PATHS) - 1:
+    #                 hb_str = hb_str + "_"
+    #         args.exp = (
+    #             args.exp
+    #             + f"_ED_{new_config.data.category}_t{args.t_0}_ninv{args.n_train_step}_ngen{args.n_train_step}"
+    #             + hb_str
+    #         )
+    #     else:
+    #         args.exp = (
+    #             args.exp
+    #             + f"_ED_{new_config.data.category}_t{args.t_0}_ninv{args.n_train_step}_ngen{args.n_train_step}_orig"
+    #         )
 
-    elif args.edit_one_image:
-        if args.model_path:
-            args.exp = (
-                args.exp
-                + f'_E1_t{args.t_0}_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_t{args.t_0}_ninv{args.n_inv_step}_{os.path.split(args.model_path)[-1].replace(".pth", "")}'
-            )
-        elif args.hybrid_noise:
-            hb_str = "_"
-            for i, model_name in enumerate(HYBRID_MODEL_PATHS):
-                hb_str = hb_str + model_name.split("_")[1]
-                if i != len(HYBRID_MODEL_PATHS) - 1:
-                    hb_str = hb_str + "_"
-            args.exp = (
-                args.exp
-                + f'_E1_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_t{args.t_0}_ninv{args.n_train_step}'
-                + hb_str
-            )
-        else:
-            args.exp = (
-                args.exp
-                + f'_E1_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_t{args.t_0}_ninv{args.n_train_step}_orig'
-            )
+    # elif args.edit_one_image:
+    #     if args.model_path:
+    #         args.exp = (
+    #             args.exp
+    #             + f'_E1_t{args.t_0}_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_t{args.t_0}_ninv{args.n_inv_step}_{os.path.split(args.model_path)[-1].replace(".pth", "")}'
+    #         )
+    #     elif args.hybrid_noise:
+    #         hb_str = "_"
+    #         for i, model_name in enumerate(HYBRID_MODEL_PATHS):
+    #             hb_str = hb_str + model_name.split("_")[1]
+    #             if i != len(HYBRID_MODEL_PATHS) - 1:
+    #                 hb_str = hb_str + "_"
+    #         args.exp = (
+    #             args.exp
+    #             + f'_E1_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_t{args.t_0}_ninv{args.n_train_step}'
+    #             + hb_str
+    #         )
+    #     else:
+    #         args.exp = (
+    #             args.exp
+    #             + f'_E1_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_t{args.t_0}_ninv{args.n_train_step}_orig'
+    #         )
 
-    elif args.unseen2unseen:
-        if args.model_path:
-            args.exp = (
-                args.exp
-                + f'_U2U_t{args.t_0}_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_t{args.t_0}_ninv{args.n_inv_step}_ngen{args.n_train_step}_{os.path.split(args.model_path)[-1].replace(".pth", "")}'
-            )
-        elif args.hybrid_noise:
-            hb_str = "_"
-            for i, model_name in enumerate(HYBRID_MODEL_PATHS):
-                hb_str = hb_str + model_name.split("_")[1]
-                if i != len(HYBRID_MODEL_PATHS) - 1:
-                    hb_str = hb_str + "_"
-            args.exp = (
-                args.exp
-                + f'_U2U_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_t{args.t_0}_ninv{args.n_train_step}_ngen{args.n_train_step}'
-                + hb_str
-            )
-        else:
-            args.exp = (
-                args.exp
-                + f'_U2U_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_t{args.t_0}_ninv{args.n_train_step}_ngen{args.n_train_step}_orig'
-            )
+    # elif args.unseen2unseen:
+    #     if args.model_path:
+    #         args.exp = (
+    #             args.exp
+    #             + f'_U2U_t{args.t_0}_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_t{args.t_0}_ninv{args.n_inv_step}_ngen{args.n_train_step}_{os.path.split(args.model_path)[-1].replace(".pth", "")}'
+    #         )
+    #     elif args.hybrid_noise:
+    #         hb_str = "_"
+    #         for i, model_name in enumerate(HYBRID_MODEL_PATHS):
+    #             hb_str = hb_str + model_name.split("_")[1]
+    #             if i != len(HYBRID_MODEL_PATHS) - 1:
+    #                 hb_str = hb_str + "_"
+    #         args.exp = (
+    #             args.exp
+    #             + f'_U2U_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_t{args.t_0}_ninv{args.n_train_step}_ngen{args.n_train_step}'
+    #             + hb_str
+    #         )
+    #     else:
+    #         args.exp = (
+    #             args.exp
+    #             + f'_U2U_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_t{args.t_0}_ninv{args.n_train_step}_ngen{args.n_train_step}_orig'
+    #         )
 
-    elif args.recon_exp:
-        args.exp = (
-            args.exp
-            + f'_REC_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_t{args.t_0}_ninv{args.n_train_step}'
-        )
-    elif args.find_best_image:
-        args.exp = (
-            args.exp
-            + f"_FOpt_{new_config.data.category}_{args.trg_txts[0]}_t{args.t_0}_ninv{args.n_train_step}"
-        )
+    # elif args.recon_exp:
+    #     args.exp = (
+    #         args.exp
+    #         + f'_REC_{new_config.data.category}_{args.img_path.split("/")[-1].split(".")[0]}_t{args.t_0}_ninv{args.n_train_step}'
+    #     )
+    # elif args.find_best_image:
+    #     args.exp = (
+    #         args.exp
+    #         + f"_FOpt_{new_config.data.category}_{args.trg_txts[0]}_t{args.t_0}_ninv{args.n_train_step}"
+    #     )
 
     level = getattr(logging, args.verbose.upper(), None)
     if not isinstance(level, int):
@@ -323,7 +324,7 @@ def parse_args_and_config():
     logger.addHandler(handler1)
     logger.setLevel(level)
 
-    os.makedirs(args.exp, exist_ok=True)
+    # os.makedirs(args.exp, exist_ok=True)
     os.makedirs("checkpoint", exist_ok=True)
     os.makedirs("precomputed", exist_ok=True)
     os.makedirs("runs", exist_ok=True)
@@ -398,6 +399,8 @@ def main():
             runner.edit_one_image_eff()
         elif args.unseen2unseen:
             runner.unseen2unseen()
+        elif args.interpolate_latents:
+            runner.interpolate_latents_from_dataset()
         else:
             print("Choose one mode!")
             raise ValueError

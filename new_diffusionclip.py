@@ -63,25 +63,31 @@ class DiffusionCLIP(object):
         self.finetune_region = args.finetune_region
 
 
-    # def generate_images_from_model_and_data(self,model_path, dataset, class_name=None, region=None):
+ 
     
 
     def interpolate_latents_from_dataset(self, M=1):
 
         print(self.args.exp)
         models = []
+        latent_path = f'{DIR_NAME}_latent_pairs.pth'
+        # change?
         model_paths = [None, self.args.model_path]
         for model_path in model_paths:
             if self.config.data.dataset in ["FFHQ", "AFHQ", "IMAGENET"]:
-                model_i = i_DDPM(self.config.data.dataset)
-                if model_path:
-                    ckpt = torch.load(model_path)
+                print('FORCING IMAGNET DDPM CREATION')
+                # model = i_DDPM(self.config.data.dataset)
+                model = i_DDPM("IMAGENET")
+                if self.args.model_path:
+                    init_ckpt = torch.load(self.args.model_path)
                 else:
-                    ckpt = torch.load(MODEL_PATHS[self.config.data.dataset])
+                    init_ckpt = torch.load(MODEL_PATHS[self.config.data.dataset])
                 learn_sigma = True
+                print("Improved diffusion Model loaded.")
             else:
                 print('Not implemented dataset')
                 raise ValueError
+
             model_i.load_state_dict(ckpt)
             model_i.to(self.device)
             model_i = torch.nn.DataParallel(model_i)
@@ -100,7 +106,6 @@ class DiffusionCLIP(object):
             img_lat_pairs = []
             # pairs_path = os.path.join('precomputed/',
             #                           f'{self.config.data.category}_{mode}_t{self.args.t_0}_nim{self.args.n_precomp_img}_ninv{self.args.n_inv_step}_pairs.pth')
-            pairs_path = ''
             # if os.path.exists(pairs_path):
             #     print(f'{mode} pairs exists')
             #     img_lat_pairs_dic[mode] = torch.load(pairs_path)
@@ -111,12 +116,11 @@ class DiffusionCLIP(object):
             #             break
             #     continue
             # else:
-            train_dataset, test_dataset = get_dataset(self.config.data.dataset, DATASET_PATHS, self.config)
+            train_dataset, test_dataset = get_dataset(self.args.data_override, DATASET_PATHS, self.config)
             loader_dic = get_dataloader(train_dataset, test_dataset, bs_train=self.args.bs_train,
                                             num_workers=self.config.data.num_workers)
             loader = loader_dic[mode]
 
-            
             L_STEP = 0.3
 
             # list of tuple (interpolate, img1, img2)
@@ -125,8 +129,6 @@ class DiffusionCLIP(object):
             if not os.path.exists(DIR_NAME):
                 os.mkdir(DIR_NAME)
             
-            latent_path = f'{DIR_NAME}_latent_pairs.pth'
-
             for step, img in enumerate(loader):
                 img_1_latent = self.invert_image(img)
                 for m in range(M): # multiplicty of latents
@@ -137,65 +139,48 @@ class DiffusionCLIP(object):
                     for lambda_step in [L_STEP, 1 - L_STEP]:
                         with torch.no_grad():
                             new_latent = img_1_latent + lambda_step * (img_2_latent - img_1_latent)
-                            img_latent_pairs.append([new_latent.detach(), img.detach(), img_2.detach(), lambda_step])
+                            img_latent_pairs.append([new_latent.detach(), img.detach(), img_2.detach(), step, rng_index, lambda_step])
             
             torch.save(image_latent_pairs, latent_path)
-                        
+
+    def generate_synth_output(self, models):
+
+        DIR_NAME = f'./latents/{self.args.model_save_name}'
+        if not os.path.exists(DIR_NAME):
+            print('output direcotry does not exist')
+            return 
 
 
+        models = []
+        model_paths = [None, self.args.model_path]
+        for model_path in model_paths:
+            if self.config.data.dataset in ["FFHQ", "AFHQ", "IMAGENET"]:
+                print('FORCING IMAGNET DDPM CREATION')
+                # model = i_DDPM(self.config.data.dataset)
+                model = i_DDPM("IMAGENET")
+                if self.args.model_path:
+                    init_ckpt = torch.load(self.args.model_path)
+                else:
+                    init_ckpt = torch.load(MODEL_PATHS[self.config.data.dataset])
+                learn_sigma = True
+                print("Improved diffusion Model loaded.")
+            else:
+                print('Not implemented dataset')
+                raise ValueError
 
+            model_i.load_state_dict(ckpt)
+            model_i.to(self.device)
+            model_i = torch.nn.DataParallel(model_i)
+            model_i.eval()
+            print(f"{model_path} is loaded.")
+            models.append(model_i)
+
+        image_latent_pairs = torch.load(DIR_NAME)
+        for (new_latent, _, _, oi, ri, lam) in image_latent_pairs:
+            self.gen_image_from_latent_denoise(new_latent, models, oi, ri, lam)
+        
+        print('done creating latents')
                     
-                    
-
-                # x0 = img.to(self.config.device)
-                # tvu.save_image((x0 + 1) * 0.5, os.path.join(self.args.image_folder, f'{mode}_{step}_0_orig.png'))
-
-                # x = x0.clone()
-                # with torch.no_grad():
-                #     with tqdm(total=len(seq_inv), desc=f"Inversion process {mode} {step}") as progress_bar:
-                #         for it, (i, j) in enumerate(zip((seq_inv_next[1:]), (seq_inv[1:]))):
-                #             t = (torch.ones(n) * i).to(self.device)
-                #             t_prev = (torch.ones(n) * j).to(self.device)
-
-                #             x = denoising_step(x, t=t, t_next=t_prev, models=models,
-                #                                logvars=self.logvar,
-                #                                sampling_type='ddim',
-                #                                b=self.betas,
-                #                                eta=0,
-                #                                learn_sigma=learn_sigma,
-                #                                ratio=0)
-
-                #             progress_bar.update(1)
-
-                #     x_lat = x.clone()
-                #     tvu.save_image((x_lat + 1) * 0.5, os.path.join(self.args.image_folder,
-                #                                                    f'{mode}_{step}_1_lat_ninv{self.args.n_inv_step}.png'))
-
-                    # with tqdm(total=len(seq_inv), desc=f"Generative process {mode} {step}") as progress_bar:
-                    #     for it, (i, j) in enumerate(zip(reversed((seq_inv)), reversed((seq_inv_next)))):
-                    #         t = (torch.ones(n) * i).to(self.device)
-                    #         t_next = (torch.ones(n) * j).to(self.device)
-
-                    #         x = denoising_step(x, t=t, t_next=t_next, models=models,
-                    #                            logvars=self.logvar,
-                    #                            sampling_type=self.args.sample_type,
-                    #                            b=self.betas,
-                    #                            eta=self.args.eta,
-                    #                            learn_sigma=learn_sigma,
-                    #                            ratio=0)
-
-                    #         progress_bar.update(1)
-
-                    img_lat_pairs.append([x0, x.detach().clone(), x_lat.detach().clone()])
-
-                tvu.save_image((x + 1) * 0.5, os.path.join(self.args.image_folder, f'{mode}_{step}_1_rec.png'))
-                if step == self.args.n_precomp_img - 1:
-                    break
-
-            img_lat_pairs_dic[mode] = img_lat_pairs
-            pairs_path = os.path.join('precomputed/',
-                                      f'{self.config.data.category}_{mode}_t{self.args.t_0}_nim{self.args.n_precomp_img}_ninv{self.args.n_inv_step}_pairs.pth')
-            torch.save(img_lat_pairs, pairs_path)
 
     def gen_image_from_latent_denoise(self, x_lat, models, oi, ri, lam, sampling_type='ddpm'):
         # ----------- Generative Process -----------#
@@ -246,8 +231,8 @@ class DiffusionCLIP(object):
                 #                                                f"3_gen_t{self.args.t_0}_it{it}_ninv{self.args.n_inv_step}_ngen{self.args.n_test_step}_mrat{self.args.model_ratio}_{self.args.model_path.split('/')[-1].replace('.pth','')}.png"))
                 # else:
 
-                image_save_name = os.path.join('latents/',
-                                                           f'{self.args.model_save_name}/synth_{self.args.class_name}_{oi}_{ri}_{lam}.png')
+                image_save_name = os.path.join(DIR_NAME,
+                                                           f'synth_{self.args.class_name}_{oi}_{ri}_{lam}.png')
                 image_save_name.replace(".", "")
                 tvu.save_image((x + 1) * 0.5, image_save_name)
 
@@ -600,7 +585,7 @@ class DiffusionCLIP(object):
 
     def invert_image(self, img, ret_x0=False):
                 x0 = img.to(self.config.device)
-                tvu.save_image((x0 + 1) * 0.5, os.path.join(self.args.image_folder, f'{mode}_{step}_0_orig.png'))
+                # tvu.save_image((x0 + 1) * 0.5, os.path.join(self.args.image_folder, f'{mode}_{step}_0_orig.png'))
 
                 x = x0.clone()
                 with torch.no_grad():
@@ -620,8 +605,8 @@ class DiffusionCLIP(object):
                             progress_bar.update(1)
 
                     x_lat = x.clone()
-                    tvu.save_image((x_lat + 1) * 0.5, os.path.join(self.args.image_folder,
-                                                                   f'{mode}_{step}_1_lat_ninv{self.args.n_inv_step}.png'))
+                    # tvu.save_image((x_lat + 1) * 0.5, os.path.join(self.args.image_folder,
+                    #                                                f'{mode}_{step}_1_lat_ninv{self.args.n_inv_step}.png'))
                     progress_bar.update(1)
 
                     # img_lat_pairs.append([x0, x_lat.detach().clone()])

@@ -119,14 +119,31 @@ class DiffusionCLIP(object):
             
             L_STEP = 0.3
 
+            # list of tuple (interpolate, img1, img2)
+            img_latent_pairs = []
+            DIR_NAME = f'./latents/{self.args.model_save_name}'
+            if not os.path.exists(DIR_NAME):
+                os.mkdir(DIR_NAME)
+            
+            latent_path = f'{DIR_NAME}_latent_pairs.pth'
+
             for step, img in enumerate(loader):
                 img_1_latent = self.invert_image(img)
                 for m in range(M): # multiplicty of latents
                     rng_index = np.random.randint(0, len(loader))
-                    img_2_latent = loader[rng_index].clone()
+                    img_2 = loader[rng_index].clone()
+                    img_2_latent = self.invert_image(img_2)
 
-                    for lambda_step in [L_STEP, 1 - L_STEP]
-                        new_latent = img_1_latent + lambda_step * (img_2_latent - img_1_latent)
+                    for lambda_step in [L_STEP, 1 - L_STEP]:
+                        with torch.no_grad():
+                            new_latent = img_1_latent + lambda_step * (img_2_latent - img_1_latent)
+                            img_latent_pairs.append([new_latent.detach(), img.detach(), img_2.detach(), lambda_step])
+            
+            torch.save(image_latent_pairs, latent_path)
+                        
+
+
+
                     
                     
 
@@ -179,6 +196,63 @@ class DiffusionCLIP(object):
             pairs_path = os.path.join('precomputed/',
                                       f'{self.config.data.category}_{mode}_t{self.args.t_0}_nim{self.args.n_precomp_img}_ninv{self.args.n_inv_step}_pairs.pth')
             torch.save(img_lat_pairs, pairs_path)
+
+    def gen_image_from_latent_denoise(self, x_lat, models, oi, ri, lam, sampling_type='ddpm'):
+        # ----------- Generative Process -----------#
+            # print(f"Sampling type: {self.args.sample_type.upper()} with eta {self.args.eta}, "
+            #       f" Steps: {self.args.n_test_step}/{self.args.t_0}")
+
+            DIR_NAME = f'./latents/{self.args.model_save_name}'
+            if not os.path.exists(DIR_NAME):
+                os.mkdir(DIR_NAME)
+
+            if self.args.n_test_step != 0:
+                seq_test = np.linspace(0, 1, self.args.n_test_step) * self.args.t_0
+                seq_test = [int(s) for s in list(seq_test)]
+                print('Uniform skip type')
+            else:
+                seq_test = list(range(self.args.t_0))
+                print('No skip')
+            seq_test_next = [-1] + list(seq_test[:-1])
+
+            # for it in range(self.args.n_iter):
+            for it in range(1):
+                x = x_lat.clone()
+                
+                with tqdm(total=len(seq_test), desc="Generative process {}".format(it)) as progress_bar:
+                    for i, j in zip(reversed(seq_test), reversed(seq_test_next)):
+                        t = (torch.ones(n) * i).to(self.device)
+                        t_next = (torch.ones(n) * j).to(self.device)
+
+                        x = denoising_step(x, t=t, t_next=t_next, models=models,
+                                           logvars=self.logvar,
+                                           sampling_type=sampling_type,
+                                           b=self.betas,
+                                           eta=self.args.eta,
+                                           learn_sigma=learn_sigma,
+                                           ratio=self.args.model_ratio,
+                                           hybrid=self.args.hybrid_noise,
+                                           hybrid_config=HYBRID_CONFIG)
+
+                        # added intermediate step vis
+                        if self.args.intermed_vis == 1 and (i - 99) % 100 == 0:
+                            tvu.save_image((x + 1) * 0.5, os.path.join(self.args.image_folder,
+                                                                       f'2_lat_t{self.args.t_0}_ninv{self.args.n_inv_step}_ngen{self.args.n_test_step}_{i}_it{it}.png'))
+                        progress_bar.update(1)
+
+                x0 = x.clone()
+                # if self.args.model_path:
+                #     tvu.save_image((x + 1) * 0.5, os.path.join(self.args.image_folder,
+                #                                                f"3_gen_t{self.args.t_0}_it{it}_ninv{self.args.n_inv_step}_ngen{self.args.n_test_step}_mrat{self.args.model_ratio}_{self.args.model_path.split('/')[-1].replace('.pth','')}.png"))
+                # else:
+
+                image_save_name = os.path.join('latents/',
+                                                           f'{self.args.model_save_name}/synth_{self.args.class_name}_{oi}_{ri}_{lam}.png')
+                image_save_name.replace(".", "")
+                tvu.save_image((x + 1) * 0.5, image_save_name)
+
+        
+        
     
     def clip_finetune_eff(self):
         print(self.args.exp)

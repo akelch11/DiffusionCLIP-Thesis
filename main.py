@@ -25,6 +25,7 @@ def parse_args_and_config():
     parser.add_argument("--clip_finetune_eff", action="store_true")
     parser.add_argument("--edit_one_image_eff", action="store_true")
     parser.add_argument("--interpolate_latents", action="store_true")
+    parser.add_argument("--generate_synth", action="store_true")
 
     # Default
     parser.add_argument(
@@ -201,6 +202,8 @@ def parse_args_and_config():
     parser.add_argument("--finetune_class_name", type=str, default=None)
     parser.add_argument("--finetune_region", type=str, default=None)
     parser.add_argument("--param_set", type=str, default=None)
+    parser.add_argument("--latent_mult", type=int, default=1)
+    parser.add_argument("--latent_file_path", type=str, default=None)
 
     args = parser.parse_args()
 
@@ -385,22 +388,14 @@ def main():
 
     runner = DiffusionCLIP(args, config)
     try:
-        if args.clip_finetune:
-            runner.clip_finetune()
-        elif args.clip_finetune_eff:
+        # if args.clip_finetune:
+        #     runner.clip_finetune()
+        if args.clip_finetune_eff:
             runner.clip_finetune_eff()
-        elif args.clip_latent_optim:
-            runner.clip_latent_optim()
-        elif args.edit_images_from_dataset:
-            runner.edit_images_from_dataset()
-        elif args.edit_one_image:
-            runner.edit_one_image()
-        elif args.edit_one_image_eff:
-            runner.edit_one_image_eff()
-        elif args.unseen2unseen:
-            runner.unseen2unseen()
         elif args.interpolate_latents:
-            runner.interpolate_latents_from_dataset()
+            runner.interpolate_latents_from_dataset(M=args.latent_mult)
+        elif args.generate_synth:
+            runner.generate_synth_output()
         else:
             print("Choose one mode!")
             raise ValueError

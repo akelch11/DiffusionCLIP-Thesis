@@ -103,7 +103,7 @@ class DiffusionCLIP(object):
             loader_len = len(loader)
             it = 0
             for step, img in enumerate(loader):
-                if it % 1000 = 0:
+                if it % 100 == 0:
                     print(f'iteration {it}/{loader_len}')
                 # img_1_latent = self.invert_image(img, models)
                 for m in range(M): # multiplicty of latents
@@ -122,32 +122,32 @@ class DiffusionCLIP(object):
             torch.save(img_latent_pairs, latent_path)
 
     def load_model(self, path, model_list):
-        if self.config.data.dataset in ["FFHQ", "AFHQ", "IMAGENET"]:
-                print('FORCING IMAGNET DDPM CREATION')
-                # model = i_DDPM(self.config.data.dataset)
-                model = i_DDPM("IMAGENET")
-                if self.args.model_path:
-                    init_ckpt = torch.load(self.args.model_path)
-                else:
-                    init_ckpt = torch.load(MODEL_PATHS[self.config.data.dataset])
-                learn_sigma = True
-                print("Improved diffusion Model loaded.")
-            else:
-                print('Not implemented dataset')
-                raise ValueError
-
-            model_i.load_state_dict(ckpt)
-            model_i.to(self.device)
-            model_i = torch.nn.DataParallel(model_i)
-            model_i.eval()
-            print(f"{model_path} is loaded.")
-            model_list.append(model_i)
+            # if self.config.data.dataset in ["FFHQ", "AFHQ", "IMAGENET"]:
+            #     print('FORCING IMAGNET DDPM CREATION')
+            #     # model = i_DDPM(self.config.data.dataset)
+            #     model = i_DDPM("IMAGENET")
+            #     if self.args.model_path:
+            #         init_ckpt = torch.load(self.args.model_path)
+            #     else:
+            #         init_ckpt = torch.load(MODEL_PATHS[self.config.data.dataset])
+            #     learn_sigma = True
+            #     print("Improved diffusion Model loaded.")
+            # else:
+            #     print('Not implemented dataset')
+            #     raise ValueError
+            model = torch.load(path)
+            # model.load_state_dict(init_ckpt)
+            model.to(self.device)
+            model = torch.nn.DataParallel(model)
+            model.eval()
+            print(f"{path} is loaded.")
+            model_list.append(model)
             
 
-    def generate_synth_output(self):
+    def generate_synth_output(self, bandwidth=0):
 
         LATENT_DIR_NAME = f'./latents/{self.args.latent_file_path}/'
-        if not os.path.exists(DIR_NAME):
+        if not os.path.exists(LATENT_DIR_NAME):
             print('latent direcotry does not exist')
             return 
 
@@ -155,19 +155,20 @@ class DiffusionCLIP(object):
         model_paths = [self.args.model_path]
         for model_path in model_paths:
             self.load_model(model_path, models)
-        
+        model = models[0]
+
         image_latent_pairs = torch.load(os.path.join(LATENT_DIR_NAME, 'latent_pairs.pth'))
         with torch.no_grad():
             for (new_latent, _, _, oi, ri, lam) in image_latent_pairs:
-                self.gen_image_from_latent_denoise(new_latent, models, oi, ri, lam)
+                self.gen_image_from_latent_denoise(new_latent, model, oi, ri, lam, bandwidth=bandwidth)
         
         print('done creating SYNTH')
                     
 
-    def gen_image_from_latent_denoise(self, x_lat, models, oi, ri, lam, sampling_type='ddpm'):
+    def gen_image_from_latent_denoise(self, x_lat, models, oi, ri, lam, sampling_type='ddim', bandwidth=0):
         # ----------- Generative Process -----------#
-            LATENT_DIR_NAME = f'./latents/{self.latent_file_path}'
-            SYNTH_DIR_NAME = f'./synth/{self.args.model_save_name}'
+            LATENT_DIR_NAME = f'./latents/{self.args.latent_file_path}'
+            SYNTH_DIR_NAME = f'./synth/{self.args.latent_file_path}_bandwidth_{bandwidth}'
             if not os.path.exists(SYNTH_DIR_NAME):
                 os.mkdir(SYNTH_DIR_NAME)
 
@@ -179,7 +180,7 @@ class DiffusionCLIP(object):
                 seq_test = list(range(self.args.t_0))
                 print('No skip')
             seq_test_next = [-1] + list(seq_test[:-1])
-
+            n = 1
             # for it in range(self.args.n_iter):
             for it in range(1):
 
@@ -194,16 +195,16 @@ class DiffusionCLIP(object):
                                            logvars=self.logvar,
                                            sampling_type=sampling_type,
                                            b=self.betas,
-                                           eta=self.args.eta,
-                                           learn_sigma=learn_sigma,
+                                           eta=bandwidth,
+                                           learn_sigma=True,
                                            ratio=self.args.model_ratio,
                                            hybrid=self.args.hybrid_noise,
                                            hybrid_config=HYBRID_CONFIG)
 
                         # added intermediate step vis
-                        if self.args.intermed_vis == 1 and (i - 99) % 100 == 0:
-                            tvu.save_image((x + 1) * 0.5, os.path.join(self.args.image_folder,
-                                                                       f'2_lat_t{self.args.t_0}_ninv{self.args.n_inv_step}_ngen{self.args.n_test_step}_{i}_it{it}.png'))
+                        # if self.args.intermed_vis == 1 and (i - 99) % 100 == 0:
+                        #     tvu.save_image((x + 1) * 0.5, os.path.join(self.args.image_folder,
+                        #                                                f'2_lat_t{self.args.t_0}_ninv{self.args.n_inv_step}_ngen{self.args.n_test_step}_{i}_it{it}.png'))
                         progress_bar.update(1)
 
                 x0 = x.clone()
@@ -222,7 +223,7 @@ class DiffusionCLIP(object):
 
         # ----------- Model -----------#
     
-       if self.config.data.dataset in ["AFHQ", "IMAGENET"]:
+        if self.config.data.dataset in ["AFHQ", "IMAGENET"]:
             print('FORCING IMAGNET DDPM CREATION')
             # model = i_DDPM(self.config.data.dataset)
             model = i_DDPM("IMAGENET")

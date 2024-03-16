@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1               # total number of tasks across all nodes
 #SBATCH --cpus-per-task=1        # cpu-cores per task (>1 if multi-threaded tasks)
 #SBATCH --gres=gpu:1             # number of gpus per node
-#SBATCH --time=01:00:00          # total run time limit (HH:MM:SS)
+#SBATCH --time=05:00:00          # total run time limit (HH:MM:SS)
 #SBATCH --mail-type=begin        # send mail when job begins
 #SBATCH --mail-type=end          # send mail when job ends
 #SBATCH --mail-type=fail         # send mail if job fails
@@ -33,11 +33,11 @@ conda activate torch-thesis
                --n_inv_step 40     \
                --n_train_step 10 \
 	           --n_test_step 40 \
-               --model_path checkpoint/geode_house_ALL_finetune_NORMAL.pt \
+               --model_path checkpoint/geode_house_finetune.pt \
                --model_save_name geode_house_Africa_finetune \
 		       --finetune_class_name house \
                --finetune_region Africa \
-               --latent_mult 10
+               --latent_mult 5
                
 
 

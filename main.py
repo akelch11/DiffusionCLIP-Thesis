@@ -97,7 +97,7 @@ def parse_args_and_config():
         help="ddpm for Markovian sampling, ddim for non-Markovian sampling",
     )
     parser.add_argument(
-        "--eta",
+        "--bandwidth",
         type=float,
         default=0.0,
         help="Controls of varaince of the generative process",
@@ -395,7 +395,7 @@ def main():
         elif args.interpolate_latents:
             runner.interpolate_latents_from_dataset(M=args.latent_mult)
         elif args.generate_synth:
-            runner.generate_synth_output()
+            runner.generate_synth_output(bandwidth=args.bandwidth)
         else:
             print("Choose one mode!")
             raise ValueError

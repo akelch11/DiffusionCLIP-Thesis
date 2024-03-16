@@ -1,13 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=geode_interpolate_latents_ALL    # create a short name for your job
+
+#SBATCH --job-name=geode_generate_synth_house    # create a short name for your job
 #SBATCH --nodes=1                # node count
 #SBATCH --ntasks=1               # total number of tasks across all nodes
 #SBATCH --cpus-per-task=1        # cpu-cores per task (>1 if multi-threaded tasks)
 #SBATCH --gres=gpu:1             # number of gpus per node
 #SBATCH --time=01:00:00          # total run time limit (HH:MM:SS)
-#SBATCH --mail-type=begin        # send mail when job begins
-#SBATCH --mail-type=end          # send mail when job ends
-#SBATCH --mail-type=fail         # send mail if job fails
 #SBATCH --mail-user=akelch@princeton.edu
 
 #SBATCH --gpus-per-node=1
@@ -35,7 +33,8 @@ conda activate torch-thesis
 	           --n_test_step 40 \
                --model_path checkpoint/geode_house_finetune.pt \
                --latent_file_path geode_house_finetune \
-               --latent_mult 10
+               --latent_mult 10 \
+               --bandwidth 0.3
                
 
 

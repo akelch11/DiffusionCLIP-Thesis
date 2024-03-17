@@ -34,7 +34,8 @@ conda activate torch-thesis
                --model_path checkpoint/geode_house_finetune.pt \
                --latent_file_path geode_house_finetune \
                --latent_mult 10 \
-               --bandwidth 0.3
+               --bandwidth 0.3 \
+               --lambda_step 0.2
                
 
 

@@ -7,6 +7,7 @@ import os
 import torch
 import numpy as np
 
+import os
 ## copy
 
 from new_diffusionclip import DiffusionCLIP
@@ -25,7 +26,9 @@ def parse_args_and_config():
     parser.add_argument("--clip_finetune_eff", action="store_true")
     parser.add_argument("--edit_one_image_eff", action="store_true")
     parser.add_argument("--interpolate_latents", action="store_true")
+    parser.add_argument("--dist_interpolate_latents", action="store_true")
     parser.add_argument("--generate_synth", action="store_true")
+
 
     # Default
     parser.add_argument(
@@ -204,6 +207,8 @@ def parse_args_and_config():
     parser.add_argument("--param_set", type=str, default=None)
     parser.add_argument("--latent_mult", type=int, default=1)
     parser.add_argument("--latent_file_path", type=str, default=None)
+    parser.add_argument("--lambda_step", type=float, default=0.3)
+    parser.add_argument("--num_gpus", type=int, default=1)
 
     args = parser.parse_args()
 
@@ -393,9 +398,14 @@ def main():
         if args.clip_finetune_eff:
             runner.clip_finetune_eff()
         elif args.interpolate_latents:
+            print('normal interpolate')
             runner.interpolate_latents_from_dataset(M=args.latent_mult)
         elif args.generate_synth:
             runner.generate_synth_output(bandwidth=args.bandwidth)
+        elif args.dist_interpolate_latents:
+            print('dstributed interpolate')
+            os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+            runner.distributed_interpolate_master(GPUS=args.num_gpus)
         else:
             print("Choose one mode!")
             raise ValueError

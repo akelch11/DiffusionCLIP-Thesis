@@ -13,6 +13,10 @@ import torchvision.utils as tvu
 from matplotlib import pyplot as plt
 
 from models.ddpm.diffusion import DDPM
+from torch.utils.data.distributed import DistributedSampler
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.distributed as dist
+import torch.multiprocessing as mp
 from models.improved_ddpm.script_util import i_DDPM
 from utils.text_dic import SRC_TRG_TXT_DIC
 from utils.diffusion_utils import get_beta_schedule, denoising_step
@@ -63,7 +67,108 @@ class DiffusionCLIP(object):
         self.finetune_region = args.finetune_region
 
 
+
+    def distributed_interpolate_worker(self, rank, world_size, M, L_STEP):
+        # 1. setup
+        os.environ['MASTER_ADDR'] = 'localhost'
+        os.environ['MASTER_PORT'] = '12355'
+        dist.init_process_group("nccl", rank=rank, world_size=world_size)
+        torch.cuda.set_device(rank)
+        device = torch.device(f"cuda:{rank}")
+        print(f"Running basic DDP example on rank {rank}.")
+
+        # 2. Prep dataloader
+
+        # def prepare_dataloader(rank, world_size, batch_size=1, pin_memory=False, num_workers=0):
+            
+        #     train_ds, test_ds = get_dataset(self.args.data_override, DATASET_PATHS, self.config, class_name=self.args.finetune_class_name, region=self.args.finetune_region)
+        #     sampler = DistributedSampler(train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False)
+        #     # dataloader = DataLoader(dataset, batch_size=batch_size, pin_memory=pin_memory, num_workers=num_workers, drop_last=False, shuffle=False, sampler=sampler)
+        #     dataloader = get_dataloader(train_ds, bs_train=1,
+        #                                     num_workers=self.config.data.num_workers, sampler=sampler)['train']
+            
+        #     return dataloader
+        
+        # dataloader = prepare_dataloader(rank, world_size)
+        # multiplicty_data_loaders = [iter(prepare_dataloader(rank, world_size)) for _ in range(M)]
+
+        # 3. wrap model in DDP
+        model = torch.load(self.args.model_path).to(rank)
+        model = DDP(model, device_ids=[rank], output_device=rank)
+        
+        model.eval()
+        models = model
+        learn_sigma=True
+
+        #4. run denoising
+
+        # list of tuples (interpolate, img1, img2)
+        img_latent_pairs = []
+        DIR_NAME = f'./latents/{self.args.model_save_name}'
+        if not os.path.exists(DIR_NAME):
+            os.mkdir(DIR_NAME)
+        latent_path = f'{DIR_NAME}/latent_pairs_{rank}.pth'
+
+        # loader_len = len(dataloader)
+        # original_dataset = dataloader.dataset
+        # it = 0
+
+        in1 = torch.randn((1,3,512,512))
+        in2 = torch.randn((1,3,512,512))
+        device = torch.device(f"cuda:{dist.get_rank()}")
+        model.to(device)
+        in1.to(0)
+        in2.to(0)
+        print('input devices:', in1.device, in2.device)
+        for param in model.parameters():
+            print(param.size(),'on device:', param.device)
+
+        with model.join():
+            lambda_step = 0.2
+            img_1_latent, img_2_latent = self.invert_images(in1, in2, models)
+            print('DONE INVERTING')
+            new_latent = img_1_latent + lambda_step * (img_2_latent - img_1_latent)
+            img_latent_pairs.append([new_latent.detach(), img.detach(), img_2.detach(), 0,0,lambda_step])
+
+
+        # for step, img in enumerate(dataloader):
+        #         # img = img.to(f'cuda:{model.device_ids[0]}')
+        #         if it % 1 == 0:
+        #             print(f'iteration {it}/{loader_len}')
+        #         # img_1_latent = self.invert_image(img, models)
+        #         for m in range(M): # multiplicty of latents
+        #         #fix random seed
+
+        #             img_2 = next(multiplicty_data_loaders[m])
+        #             # img_2 = img_2.to(f'cuda:{model.device_ids[0]}')
+                    
+        #             img_1_latent, img_2_latent = self.invert_images(img, img_2, models)
+                 
+        #             for lambda_step in [L_STEP, 1 - L_STEP]:
+        #                 with torch.no_grad():
+        #                     new_latent = img_1_latent + lambda_step * (img_2_latent - img_1_latent)
+        #                     img_latent_pairs.append([new_latent.detach(), img.detach(), img_2.detach(), step, rng_index, lambda_step])
+        #         it += 1
+
+        print('SAVING LATENTS at', latent_path)
+        torch.save(img_latent_pairs, latent_path)
+
+        # 5. cleanup
+        dist.destroy_process_group()
+
+
  
+    def distributed_interpolate_master(self, M=10, GPUS=3):
+
+        # dist.init_process_group("nccl", rank=rank, world_size=world_size)
+        M = 2
+        L_STEP = 0.3 
+        world_size= torch.cuda.device_count()
+        
+        mp.spawn(self.distributed_interpolate_worker, args=(world_size, M, L_STEP), nprocs=world_size)
+        
+        
+
     
 
     def interpolate_latents_from_dataset(self, M=10):
@@ -72,8 +177,10 @@ class DiffusionCLIP(object):
         models = []
         DIR_NAME = f'./latents/{self.args.model_save_name}'
         latent_path = f'{DIR_NAME}/latent_pairs.pth'
-  
+
         model = torch.load(self.args.model_path)
+        model = nn.DataParallel(model)
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         model.to(self.device)
         models = model
         learn_sigma=True
@@ -89,7 +196,7 @@ class DiffusionCLIP(object):
             img_lat_pairs = []
            
             train_dataset, test_dataset = get_dataset(self.args.data_override, DATASET_PATHS, self.config, class_name=self.args.finetune_class_name, region=self.args.finetune_region)
-            loader_dic = get_dataloader(train_dataset, test_dataset, bs_train=1,
+            loader_dic = get_dataloader(train_dataset, bs_train=1,
                                             num_workers=self.config.data.num_workers)
             loader = loader_dic[mode]
 
@@ -103,13 +210,16 @@ class DiffusionCLIP(object):
             loader_len = len(loader)
             it = 0
             for step, img in enumerate(loader):
-                if it % 100 == 0:
+
+                img = img.to(device)
+                if it % 1 == 0:
                     print(f'iteration {it}/{loader_len}')
                 # img_1_latent = self.invert_image(img, models)
                 for m in range(M): # multiplicty of latents
                 #fix random seed
                     rng_index = np.random.randint(0, len(train_dataset))
                     img_2 = train_dataset[rng_index].clone()
+                    img2 = img_2.to(device)
                     img_1_latent, img_2_latent = self.invert_images(img, img_2, models)
                  
                     for lambda_step in [L_STEP, 1 - L_STEP]:
@@ -570,12 +680,14 @@ class DiffusionCLIP(object):
                 seq_inv = np.linspace(0, 1, self.args.n_inv_step) * self.args.t_0
                 seq_inv = [int(s) for s in list(seq_inv)]
                 seq_inv_next = [-1] + list(seq_inv[:-1])
-                x0 = img.to(self.config.device)
+
+                device = torch.device(f"cuda:{0}")
+                x0 = img.to(device)
                 # tvu.save_image((x0 + 1) * 0.5, os.path.join(self.args.image_folder, f'{mode}_{step}_0_orig.png'))
                 n = 1
                 x = x0.clone()
-                if i == 1:
-                    x = torch.unsqueeze(x,0)
+                # if i == 1:
+                #     x = torch.unsqueeze(x,0)
                 with torch.no_grad():
                     with tqdm(total=len(seq_inv), desc=f"Inversion process") as progress_bar:
                         for it, (i, j) in enumerate(zip((seq_inv_next[1:]), (seq_inv[1:]))):
@@ -671,7 +783,7 @@ class DiffusionCLIP(object):
                 continue
             else:
                 train_dataset, test_dataset = get_dataset(self.config.data.dataset, DATASET_PATHS, self.config)
-                loader_dic = get_dataloader(train_dataset, test_dataset, bs_train=self.args.bs_train,
+                loader_dic = get_dataloader(train_dataset, bs_train=self.args.bs_train,
                                             num_workers=self.config.data.num_workers)
                 loader = loader_dic[mode]
 

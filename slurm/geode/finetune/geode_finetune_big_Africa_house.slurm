@@ -12,7 +12,7 @@
 
 #SBATCH --gpus-per-node=1
 #SBATCH --constraint=gpu80
-#SBATCH --mem=80G
+#SBATCH --mem=20G
 
 
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=geode_interpolate_latents_ALL    # create a short name for your job
+#SBATCH --job-name=geode_interpolate_latents_Africa_house   # create a short name for your job
 #SBATCH --nodes=1                # node count
 #SBATCH --ntasks=1               # total number of tasks across all nodes
 #SBATCH --cpus-per-task=1        # cpu-cores per task (>1 if multi-threaded tasks)
@@ -25,7 +25,7 @@ conda activate torch-thesis
                --data_override GEODE\
                --config afhq.yml      \
                --exp ./runs/test        \
-               --edit_attr house_in_Nigeria      \
+               --edit_attr house_in_Africa      \
                --do_train 1             \
                --do_test 0 \
                --n_iter 1              \
@@ -37,7 +37,7 @@ conda activate torch-thesis
                --model_save_name geode_house_Africa_finetune \
 		       --finetune_class_name house \
                --finetune_region Africa \
-               --latent_mult 2
+               --latent_mult 5
                
 
 

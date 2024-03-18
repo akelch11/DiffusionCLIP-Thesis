@@ -71,7 +71,7 @@ class DiffusionCLIP(object):
         print('INSIDE INTERPOLATE')
         models = []
         DIR_NAME = f'./latents/{self.args.model_save_name}'
-        latent_path = f'{DIR_NAME}/latent_pairs.pth'
+        latent_path = f'{DIR_NAME}/latent_pairs_M{M}_L{self.args.lambda_step}.pth'
   
         model = torch.load(self.args.model_path)
         model.to(self.device)
@@ -93,7 +93,7 @@ class DiffusionCLIP(object):
                                             num_workers=self.config.data.num_workers)
             loader = loader_dic[mode]
 
-            L_STEP = 0.3  
+            L_STEP = self.args.lambda_step  
 
             # list of tuple (interpolate, img1, img2)
             img_latent_pairs = []
@@ -103,7 +103,7 @@ class DiffusionCLIP(object):
             loader_len = len(loader)
             it = 0
             for step, img in enumerate(loader):
-                if it % 100 == 0:
+                if it % 1 == 0:
                     print(f'iteration {it}/{loader_len}')
                 # img_1_latent = self.invert_image(img, models)
                 for m in range(M): # multiplicty of latents
@@ -284,7 +284,7 @@ class DiffusionCLIP(object):
             else:
                 # pairs_path = os.path.join('precomputed/',
                 #                           f'{self.args.data_override}_{self.config.data.category}_{mode}_t{self.args.t_0}_nim{self.args.n_precomp_img}_ninv{self.args.n_inv_step}_pairs.pth')
-                pairs_path = os.path.join('precomputed/',f'{self.args.model_save_name}_{self.args.param_set}')
+                pairs_path = os.path.join('precomputed/',f'{self.args.model_save_name}_{self.args.param_set}.pth')
             print(pairs_path)
             if os.path.exists(pairs_path):
                 print(f'{mode} pairs exists')
@@ -372,7 +372,7 @@ class DiffusionCLIP(object):
 
         # ----------- Finetune Diffusion Models -----------#
         print("Start finetuning")
-        print(f"Sampling type: {self.args.sample_type.upper()} with eta {self.args.eta}")
+        print(f"Sampling type: {self.args.sample_type.upper()} with eta {self.args.bandwidth}")
         if self.args.n_train_step != 0:
             seq_train = np.linspace(0, 1, self.args.n_train_step) * self.args.t_0
             seq_train = [int(s) for s in list(seq_train)]
@@ -401,12 +401,12 @@ class DiffusionCLIP(object):
 
                 exp_id = os.path.split(self.args.exp)[-1]
                 print('save name parts', exp_id, trg_txt, it_out)
-                save_name = f'checkpoint/{exp_id}_{trg_txt.replace(" ", "_")}-{it_out}.pth'
+                save_name = f'checkpoint/{exp_id}_{trg_txt.replace(" ", "_")}_{self.args.n_train_img}_{self.args.sample_type}_l1_{self.args.l1_loss_w}-{it_out}.pth'
                 if self.args.model_save_name:
                     # save_name = f'checkpoint/{self.args.model_save_name}-{it_out}.pth'
                     # full_model_save_name = f'checkpoint/{self.args.model_save_name}-{it_out}.pt'
-                    save_name = f'checkpoint/{self.args.model_save_name}_{self.args.param_set}.pth'
-                    full_model_save_name = f'checkpoint/{self.args.model_save_name}_{self.args.param_set}.pt'
+                    save_name = f'checkpoint/{self.args.model_save_name}_{self.args.param_set}_{self.args.n_train_img}_{self.args.sample_type}_l1_{self.args.l1_loss_w}-{it_out}.pth'
+                    full_model_save_name = f'checkpoint/{self.args.model_save_name}_{self.args.param_set}_{self.args.n_train_img}_{self.args.sample_type}_l1_{self.args.l1_loss_w}-{it_out}.pt'
                 if self.args.do_train:
                     if os.path.exists(save_name):
                         print(f'{save_name} already exists.')
@@ -427,9 +427,9 @@ class DiffusionCLIP(object):
 
                                     x, x0_t = denoising_step(x, t=t, t_next=t_next, models=model,
                                                              logvars=self.logvar,
-                                                             sampling_type=self.args.sample_type,
+                                                             sampling_type='ddim',
                                                              b=self.betas,
-                                                             eta=self.args.eta,
+                                                             eta=self.args.bandwidth,
                                                              learn_sigma=learn_sigma,
                                                              out_x0_t=True)
 
@@ -453,7 +453,7 @@ class DiffusionCLIP(object):
                                     optim_ft.step()
                                     for p in model.module.parameters():
                                         p.grad = None
-                                    print(f"CLIP {step}-{it_out}: loss_clip: {loss_clip:.3f}")
+                                    print(f"CLIP {step}-{it_out}: loss_L1: {loss_l1:.3f}")
                                     # break
 
                             if self.args.save_train_image:
@@ -505,7 +505,7 @@ class DiffusionCLIP(object):
                                                        logvars=self.logvar,
                                                        sampling_type=self.args.sample_type,
                                                        b=self.betas,
-                                                       eta=self.args.eta,
+                                                       eta=self.args.bandwidth,
                                                        learn_sigma=learn_sigma)
 
                                     progress_bar.update(1)
@@ -516,13 +516,8 @@ class DiffusionCLIP(object):
                             if step == self.args.n_test_img - 1:
                                 break
 
-            pickle.dump(iter_losses,f'plots/losses_{f'{self.args.data_override}_{self.config.data.category}_{mode}_t{self.args.t_0}_nim{self.args.n_precomp_img}_ninv{self.args.n_inv_step}_pairs.pth'}')
-            # iter_values = np.arange(0, len(iter_losses))
-            # plt.plot(iter_values, iter_losses)
-            # plt.title('Loss vs Fine-Tuning Iterations')
-            # plt.xlabel("Fine Tuning Iterations")
-            # plt.ylabel("Loss")
-            # plt.savefig(f'plots/plot_{self.args.save_name}.png')
+            torch.save(iter_losses,f'plots/losses_{f'{self.args.data_override}_{self.config.data.category}_{mode}_t{self.args.t_0}_nim{self.args.n_precomp_img}_ninv{self.args.n_inv_step}_pairs.pth'}')
+            
 
     def invert_image(self, img, models, ret_x0=False):
 
@@ -657,9 +652,9 @@ class DiffusionCLIP(object):
         img_lat_pairs_dic = {}
         for mode in ['test']:
             img_lat_pairs = []
-            pairs_path = os.path.join('precomputed/',
-                                      f'{self.config.data.category}_{mode}_t{self.args.t_0}_nim{self.args.n_precomp_img}_ninv{self.args.n_inv_step}_pairs.pth')
-
+            # pairs_path = os.path.join('precomputed/',
+            #                           f'{self.config.data.category}_{mode}_t{self.args.t_0}_nim{self.args.n_precomp_img}_ninv{self.args.n_inv_step}_pairs.pth')
+            pairs_path = 'precomputed/geode_house_Africa_finetune_NORMAL.pth'
             if os.path.exists(pairs_path):
                 print(f'{mode} pairs exists')
                 img_lat_pairs_dic[mode] = torch.load(pairs_path)
@@ -709,7 +704,7 @@ class DiffusionCLIP(object):
                                                logvars=self.logvar,
                                                sampling_type=self.args.sample_type,
                                                b=self.betas,
-                                               eta=self.args.eta,
+                                               eta=self.args.bandwidth,
                                                learn_sigma=learn_sigma,
                                                ratio=0)
 
@@ -728,7 +723,7 @@ class DiffusionCLIP(object):
 
 
         # ----------- Generative Process -----------#
-        print(f"Sampling type: {self.args.sample_type.upper()} with eta {self.args.eta}")
+        print(f"Sampling type: {self.args.sample_type.upper()} with eta {self.args.bandwidth}")
         if self.args.n_test_step != 0:
             seq_test = np.linspace(0, 1, self.args.n_test_step) * self.args.t_0
             seq_test = [int(s) for s in list(seq_test)]
@@ -755,7 +750,7 @@ class DiffusionCLIP(object):
                                                logvars=self.logvar,
                                                sampling_type=self.args.sample_type,
                                                b=self.betas,
-                                               eta=self.args.eta,
+                                               eta=self.args.bandwidth,
                                                learn_sigma=learn_sigma,
                                                ratio=self.args.model_ratio,
                                                hybrid=self.args.hybrid_noise,
@@ -880,7 +875,7 @@ class DiffusionCLIP(object):
 
 
             # ----------- Generative Process -----------#
-            print(f"Sampling type: {self.args.sample_type.upper()} with eta {self.args.eta}, "
+            print(f"Sampling type: {self.args.sample_type.upper()} with eta {self.args.bandwidth}, "
                   f" Steps: {self.args.n_test_step}/{self.args.t_0}")
             if self.args.n_test_step != 0:
                 seq_test = np.linspace(0, 1, self.args.n_test_step) * self.args.t_0
@@ -910,7 +905,7 @@ class DiffusionCLIP(object):
                                            logvars=self.logvar,
                                            sampling_type=self.args.sample_type,
                                            b=self.betas,
-                                           eta=self.args.eta,
+                                           eta=self.args.bandwidth,
                                            learn_sigma=learn_sigma,
                                            ratio=self.args.model_ratio,
                                            hybrid=self.args.hybrid_noise,

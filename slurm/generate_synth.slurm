@@ -23,7 +23,7 @@ conda activate torch-thesis
                --data_override GEODE\
                --config afhq.yml      \
                --exp ./runs/test        \
-               --edit_attr house_in_Nigeria      \
+               --edit_attr house_in_Africa      \
                --do_train 1             \
                --do_test 0 \
                --n_iter 1              \
@@ -31,8 +31,8 @@ conda activate torch-thesis
                --n_inv_step 40     \
                --n_train_step 10 \
 	           --n_test_step 40 \
-               --model_path checkpoint/geode_house_finetune.pt \
-               --latent_file_path geode_house_finetune \
+               --model_path checkpoint/geode_house_Africa_finetune_NORMAL_100-19.pt \
+               --latent_file_path geode_house_Africa_finetune \
                --latent_mult 10 \
                --bandwidth 0.3
                

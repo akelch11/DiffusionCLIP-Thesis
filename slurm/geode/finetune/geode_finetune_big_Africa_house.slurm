@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=geode_interpolate_latents_ALL    # create a short name for your job
+#SBATCH --job-name=geode_finetune_Africa_house    # create a short name for your job
 #SBATCH --nodes=1                # node count
 #SBATCH --ntasks=1               # total number of tasks across all nodes
 #SBATCH --cpus-per-task=1        # cpu-cores per task (>1 if multi-threaded tasks)
@@ -12,7 +12,7 @@
 
 #SBATCH --gpus-per-node=1
 #SBATCH --constraint=gpu80
-#SBATCH --mem=20G
+#SBATCH --mem=80G
 
 
 
@@ -21,23 +21,30 @@ module load anaconda3/2023.9
 conda activate torch-thesis
 
 
-! python main.py --interpolate_latents        \
+! python main.py --clip_finetune_eff        \
                --data_override GEODE\
                --config afhq.yml      \
                --exp ./runs/test        \
                --edit_attr house_in_Africa      \
                --do_train 1             \
                --do_test 0 \
-               --n_iter 1              \
+               --n_train_img 100         \
+               --bs_train 2 \
+               --n_iter 20               \
                --t_0 500                \
-               --n_inv_step 40     \
+               --n_inv_step 40          \
+               --lr_clip_finetune 8e-6  \
+               --l1_loss_w 10            \
+               --clip_loss_w 0 \
                --n_train_step 10 \
-	           --n_test_step 40 \
-               --model_path checkpoint/geode_house_finetune.pt \
+               --n_precomp_img 100 \
+               --save_train_image 0 \
+               --model_path pretrained/512x512_diffusion.pt \
                --model_save_name geode_house_Africa_finetune \
-		       --finetune_class_name house \
+               --finetune_class_name house \
                --finetune_region Africa \
-               --latent_mult 10
+               --param_set NORMAL \
+               --lambda_step 0.1
                
 
 

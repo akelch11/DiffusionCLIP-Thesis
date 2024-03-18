@@ -25,7 +25,7 @@ conda activate torch-thesis
                --data_override GEODE\
                --config afhq.yml      \
                --exp ./runs/test        \
-               --edit_attr house_in_Nigeria      \
+               --edit_attr house_in_Africa      \
                --do_train 1             \
                --do_test 0 \
                --n_train_img 50         \

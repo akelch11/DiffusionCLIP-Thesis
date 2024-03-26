@@ -63,8 +63,11 @@ class DiffusionCLIP(object):
         self.finetune_region = args.finetune_region
 
 
- 
-    
+    def extract_image_index(self, img_path):
+        parts = img_path.split("_")
+        img_index = parts[-1].split(".")[0]
+        print(img_path, img_index)
+        return img_index    
 
     def interpolate_latents_from_dataset(self, M=10):
         # print(self.args.exp)
@@ -103,19 +106,31 @@ class DiffusionCLIP(object):
             loader_len = len(loader)
             it = 0
             for step, img in enumerate(loader):
+                index = step
+                img1_path = train_dataset.image_paths[index]
+                img1_path_index = self.extract_image_index(img1_path)
                 if it % 1 == 0:
                     print(f'iteration {it}/{loader_len}')
                 # img_1_latent = self.invert_image(img, models)
                 for m in range(M): # multiplicty of latents
                 #fix random seed
                     rng_index = np.random.randint(0, len(train_dataset))
+                    while rng_index != step:
+                        rng_index = np.random.randint(0, len(train_dataset))
+                    
+                    img2_path = train_dataset.image_paths[rng_index]
+                    img2_path_index = self.extract_image_index(img2_path)
+
+
                     img_2 = train_dataset[rng_index].clone()
                     img_1_latent, img_2_latent = self.invert_images(img, img_2, models)
                  
                     for lambda_step in [L_STEP, 1 - L_STEP]:
                         with torch.no_grad():
                             new_latent = img_1_latent + lambda_step * (img_2_latent - img_1_latent)
-                            img_latent_pairs.append([new_latent.detach(), img.detach(), img_2.detach(), step, rng_index, lambda_step])
+                            org_path_index = img1_path_index
+                            rand_path_index = img2_path_index
+                            img_latent_pairs.append([new_latent.detach(), img.detach(), img_2.detach(), org_path_index, rand_path_index, lambda_step])
                 it += 1
 
             print('SAVING LATENTS at', latent_path)
@@ -148,7 +163,7 @@ class DiffusionCLIP(object):
 
         LATENT_DIR_NAME = f'./latents/{self.args.latent_file_path}/'
         if not os.path.exists(LATENT_DIR_NAME):
-            print('latent direcotry does not exist')
+            print('latent directory does not exist')
             return 
 
         models = []
@@ -157,7 +172,7 @@ class DiffusionCLIP(object):
             self.load_model(model_path, models)
         model = models[0]
 
-        image_latent_pairs = torch.load(os.path.join(LATENT_DIR_NAME, 'latent_pairs.pth'))
+        image_latent_pairs = torch.load(os.path.join(LATENT_DIR_NAME, f'latent_pairs_M5_L0.25.pth'))
         with torch.no_grad():
             for (new_latent, _, _, oi, ri, lam) in image_latent_pairs:
                 self.gen_image_from_latent_denoise(new_latent, model, oi, ri, lam, bandwidth=bandwidth)
@@ -473,10 +488,10 @@ class DiffusionCLIP(object):
                         
 
                         if it_out == self.args.n_iter-1:
-                            if isinstance(model, nn.DataParallel):
-                                torch.save(model.module.state_dict(), save_name)
-                            else:
-                                torch.save(model.state_dict(), save_name)
+                            # if isinstance(model, nn.DataParallel):
+                            #     torch.save(model.module.state_dict(), save_name)
+                            # else:
+                            #     torch.save(model.state_dict(), save_name)
                             torch.save(model, full_model_save_name) # same complete model obj for loading later
                             print(f'Model {save_name} is saved.')
 

@@ -59,7 +59,7 @@ def parse_args_and_config():
     parser.add_argument(
         "--edit_attr",
         type=str,
-        default=None,
+        default="",
         help="Attribute to edit defiend in ./utils/text_dic.py",
     )
     parser.add_argument(
@@ -205,6 +205,7 @@ def parse_args_and_config():
     parser.add_argument("--latent_mult", type=int, default=1)
     parser.add_argument("--latent_file_path", type=str, default=None)
     parser.add_argument("--lambda_step", type=float, default=None)
+    # parser.add_argument("--p_set", type=str, default="NORMAL")
 
     args = parser.parse_args()
 

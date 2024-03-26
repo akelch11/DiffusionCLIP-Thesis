@@ -7,7 +7,7 @@
 #SBATCH --time=07:00:00          # total run time limit (HH:MM:SS)
 #SBATCH --mail-user=akelch@princeton.edu
 #SBATCH --gpus-per-node=1
-#SBATCH --mem=10G
+#SBATCH --mem=30G
 
 module purge
 module load anaconda3/2023.9

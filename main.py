@@ -204,7 +204,7 @@ def parse_args_and_config():
     parser.add_argument("--param_set", type=str, default=None)
     parser.add_argument("--latent_mult", type=int, default=1)
     parser.add_argument("--latent_file_path", type=str, default=None)
-    parser.add_argument("--lambda_step", type=float, default=None)
+    parser.add_argument("--lambda_step", type=float, default=0.25)
     # parser.add_argument("--p_set", type=str, default="NORMAL")
 
     args = parser.parse_args()

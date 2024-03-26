@@ -12,10 +12,10 @@
 
 #SBATCH --gpus-per-node=1
 #SBATCH --constraint=gpu80
-#SBATCH --mem=20G
+#SBATCH --mem=40G
 
 module purge
 module load anaconda3/2023.9
 conda activate torch-thesis
 
- ! python main.py --interpolate_latents                            --data_override GEODE                    --config afhq.yml                          --exp ./runs/test                            --do_train 1                                 --do_test 0                     --n_iter 1                                  --t_0 500                                    --n_inv_step 40                         --n_train_step 10                     --n_test_step 40                     --model_path checkpoint/geode_storefront_Europe_finetune_NORMAL_30_ddim_l1_10.0-9.pt                    --model_save_name geode_storefront_Europe_finetune                     --finetune_class_name storefront                     --finetune_region Europe                     --lambda_step 0.25                     --latent_mult 5
+ ! python main.py --interpolate_latents                            --data_override GEODE                     --config afhq.yml                          --exp ./runs/test                            --do_train 1                                 --do_test 0                     --n_iter 1                                  --t_0 500                         --n_inv_step 40                         --n_train_step 10                     --n_test_step 40                     --model_path checkpoint/geode_storefront_Europe_finetune_NORMAL_30_ddim_l1_10.0-9.pt                     --model_save_name geode_storefront_Europe_finetune                     --finetune_class_name storefront                     --finetune_region Europe                     --latent_mult 5

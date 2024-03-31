@@ -1,5 +1,6 @@
 SRC_TRG_TXT_DIC = {
     # Human face
+    "": ([""], [""]),
     "tanned": (["face"], ["tanned face"]),
     "pale": (["face"], ["pale face"]),
     "makeup": (["person"], ["person with makeup"]),
